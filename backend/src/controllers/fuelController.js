@@ -1,0 +1,172 @@
+const FuelRequest = require('../models/fuelRequest');
+const Vehicle = require('../models/vehicleModel');
+const mongoose = require('mongoose');
+
+//@desc Create a new fuel request from a form
+//@route POST /api/fuel/
+//@access private (driver, manager, admin)
+const createFuelRequest = async (req, res) => {
+    try {
+        const { vehicleId, fuelType, quantity, currentKm, purpose } = req.body;
+
+        if (!vehicleId || !fuelType || quantity === undefined || currentKm === undefined || !purpose) {
+            return res.status(400).json({ message: 'vehicleId, fuelType, quantity, currentKm, and purpose are required' });
+        }
+
+        if (!vehicleId || !fuelType || quantity === undefined || currentKm === undefined || !purpose) {
+            return res.status(400).json({ message: 'vehicleId, fuelType, quantity, currentKm, and purpose are required' });
+        }
+
+      
+        if (!mongoose.Types.ObjectId.isValid(vehicleId)) {
+            return res.status(400).json({ message: 'Invalid vehicle ID format' });
+        }
+        const vehicle = await Vehicle.findById(vehicleId);
+        if (!vehicle) {
+            return res.status(404).json({ message: 'Vehicle not found' });
+        }
+
+        
+        const fuelRequest = new FuelRequest({
+            vehicleId,
+            driverId: req.user.id, 
+            requestedBy: req.user.id,
+            fuelType,
+            quantity,
+            currentKm,
+            purpose
+        });
+
+        await fuelRequest.save();
+
+        
+        vehicle.currentKm = currentKm;
+        await vehicle.save();
+
+        return res.status(201).json({
+            message: 'Fuel request form submitted successfully',
+            fuelRequest
+        });
+
+    } catch (err) {
+        console.error("Error creating fuel request:", err);
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ message: 'Validation failed', error: err.message });
+        }
+        return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+};
+
+//@desc Get all fuel requests
+//@route GET /api/fuel/
+//@access private (manager, admin)
+const getFuelRequests = async (req, res) => {
+    try{
+        const fuelRequests = await FuelRequest.find({});
+        return res.status(200).json(fuelRequests);
+    } catch (err) {
+        console.error("Error fetching fuel requests:", err);
+        return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+}
+
+//@desc Get fuel requests by id
+//@route GET /api/fuel/:id
+//@access private (admin, manager)
+const getFuelRequestById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid fuel request ID format' });
+        }
+        const fuelRequest = await FuelRequest.findById(id);
+        if (!fuelRequest) {
+            return res.status(404).json({ message: 'Fuel request not found' });
+        }
+        return res.status(200).json(fuelRequest);
+    } catch (err) {
+        console.error("Error fetching fuel request:", err);
+        return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+};
+
+//@desc Update a fuel request (approve/reject)
+//@route PUT /api/fuel/:id
+//@access private (manager, admin)
+const updateFuelRequest = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, cost } = req.body;
+
+       
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: 'Invalid fuel request ID format' });
+        }
+        const fuelRequest = await FuelRequest.findById(id);
+        if (!fuelRequest) {
+            return res.status(404).json({ message: 'Fuel request not found' });
+        }
+
+        
+        if (fuelRequest.status !== 'pending') {
+            return res.status(400).json({ message: `This request has already been ${fuelRequest.status}.` });
+        }
+
+      
+        if (status === 'approved') {
+            fuelRequest.status = 'approved';
+            fuelRequest.approvedBy = req.user.id; 
+            fuelRequest.issuedDate = new Date();
+            if (cost !== undefined) {
+                fuelRequest.cost = cost;
+            }
+        } else if (status === 'rejected') {
+            fuelRequest.status = 'rejected';
+            fuelRequest.approvedBy = req.user.id; 
+        } else {
+            return res.status(400).json({ message: "Invalid status. Must be 'approved' or 'rejected'." });
+        }
+
+        await fuelRequest.save();
+
+        return res.status(200).json({
+            message: `Fuel request has been ${status}.`,
+            fuelRequest
+        });
+
+    } catch (err) {
+        console.error("Error updating fuel request:", err);
+        return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+};
+
+//@desc DELETE fuel requests by id
+//@route DELETE /api/fuel/:id
+//@access private (admin, manager)
+const deleteFuelRequest = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid Request id' });
+        }
+        const deletedFuelRequest = await FuelRequest.findByIdAndDelete(id);
+        if (!deletedFuelRequest) {
+            return res.status(404).json({ message: 'Fuel request not found' });
+        }
+        return res.status(200).json({ message: "Request Deleted Successfully!" });
+    } catch (err) {
+        
+        console.error("Error Deleting fuel request:", err);
+        return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+}
+
+
+
+module.exports = {
+    createFuelRequest,
+    getFuelRequests,
+    getFuelRequestById,
+    updateFuelRequest,
+    deleteFuelRequest
+};
