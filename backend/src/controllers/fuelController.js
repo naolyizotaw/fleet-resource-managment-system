@@ -13,8 +13,13 @@ const createFuelRequest = async (req, res) => {
             return res.status(400).json({ message: 'vehicleId, fuelType, quantity, currentKm, and purpose are required' });
         }
 
-        if (!vehicleId || !fuelType || quantity === undefined || currentKm === undefined || !purpose) {
-            return res.status(400).json({ message: 'vehicleId, fuelType, quantity, currentKm, and purpose are required' });
+        
+        const existingRequest = await FuelRequest.findOne({
+            vehicleId,
+            status: 'pending'
+        });
+        if (existingRequest) {
+            return res.status(409).json({ message: 'There is already a pending fuel request for this vehicle.' });
         }
 
       

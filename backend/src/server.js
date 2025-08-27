@@ -6,6 +6,8 @@ const userRoutes = require('./routes/userRoutes');
 const vehicleRoutes = require('./routes/vehicleRoutes');
 const maintenanceRoutes = require('./routes/maintenanceRoutes');
 const fuelRoutes = require('./routes/fuelRoutes');
+const perDiemRoutes = require('./routes/perDiemRoutes');
+
 
 const app = express();
 dbConnect();
@@ -20,6 +22,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/fuel', fuelRoutes);
+app.use('/api/per-diem', perDiemRoutes);
 
 
 //start server 
