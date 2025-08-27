@@ -1,0 +1,41 @@
+const mongoose = require("mongoose");
+
+const driverLogSchema = new mongoose.Schema ({
+    driver: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+    },
+    vehicle: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Vehicle",
+        required: true,
+    },
+    date: {
+        type: Date,
+        default: Date.now,
+    },
+    startKm: {
+        type: Number,
+        required: true,
+    },
+    endKm: {
+        type: Number,
+        required: true,
+    },
+    distance: {
+        type:Number,
+    },
+    remarks: {
+        type: String,
+    },
+}, {timestamps: true}); 
+
+driverLogSchema.pre("save", function(next) { 
+    if(this.startKm && this.endKm) {
+        this.distance = this.endKm - this.startKm;
+    }
+    next();
+});
+
+module.exports = mongoose.model("DriverLog", driverLogSchema);

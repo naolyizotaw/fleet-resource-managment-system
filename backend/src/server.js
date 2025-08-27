@@ -7,6 +7,7 @@ const vehicleRoutes = require('./routes/vehicleRoutes');
 const maintenanceRoutes = require('./routes/maintenanceRoutes');
 const fuelRoutes = require('./routes/fuelRoutes');
 const perDiemRoutes = require('./routes/perDiemRoutes');
+const logRoutes = require('./routes/logRoutes');
 
 
 const app = express();
@@ -23,6 +24,7 @@ app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/fuel', fuelRoutes);
 app.use('/api/per-diem', perDiemRoutes);
+app.use('/api/logs', logRoutes);
 
 
 //start server 
