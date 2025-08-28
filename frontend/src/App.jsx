@@ -1,49 +1,58 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext.jsx'
-import Login from './pages/auth/Login.jsx'
-import Register from './pages/auth/Register.jsx'
-import DriverLayout from './pages/driver/DriverLayout.jsx'
-import ManagerLayout from './pages/manager/ManagerLayout.jsx'
-import AdminLayout from './pages/admin/AdminLayout.jsx'
-import ProtectedRoute from './components/ProtectedRoute.jsx'
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, AuthContext } from './context/AuthContext';
+import LoginPage from './pages/Login';
+import ProtectedRoute from './components/ProtectedRoute';
+import DashboardLayout from './components/DashboardLayout';
 
-export default function App() {
+// Placeholder for the actual dashboard pages
+const DashboardHome = () => <h2>Dashboard Home</h2>;
+const Vehicles = () => <h2>Vehicles</h2>;
+const Maintenance = () => <h2>Maintenance</h2>;
+const Fuel = () => <h2>Fuel</h2>;
+const PerDiem = () => <h2>Per Diem</h2>;
+const DriverLogs = () => <h2>Driver Logs</h2>;
+const Reports = () => <h2>Reports</h2>;
+const Users = () => <h2>Users</h2>;
+
+
+// A simple component to handle root URL redirection
+const Root = () => {
+  const { user, loading } = React.useContext(AuthContext);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  return user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />;
+};
+
+
+function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+      <Router>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
 
-        <Route
-          path="/driver/*"
-          element={
-            <ProtectedRoute allowedRoles={["driver", "user"]}>
-              <DriverLayout />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/manager/*"
-          element={
-            <ProtectedRoute allowedRoles={["manager"]}>
-              <ManagerLayout />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/*"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminLayout />
-            </ProtectedRoute>
-          }
-        />
+          <Route path="/dashboard" element={<ProtectedRoute />}>
+            <Route element={<DashboardLayout />}>
+              <Route index element={<DashboardHome />} />
+              <Route path="vehicles" element={<Vehicles />} />
+              <Route path="maintenance" element={<Maintenance />} />
+              <Route path="fuel" element={<Fuel />} />
+              <Route path="per-diem" element={<PerDiem />} />
+              <Route path="logs" element={<DriverLogs />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="users" element={<Users />} />
+            </Route>
+          </Route>
 
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+          <Route path="/" element={<Root />} />
+        </Routes>
+      </Router>
     </AuthProvider>
-  )
+  );
 }
 
-
+export default App;
