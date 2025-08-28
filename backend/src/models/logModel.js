@@ -1,12 +1,12 @@
 const mongoose = require("mongoose");
 
 const driverLogSchema = new mongoose.Schema ({
-    driver: {
+    driverId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true,
     },
-    vehicle: {
+    vehicleId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Vehicle",
         required: true,
