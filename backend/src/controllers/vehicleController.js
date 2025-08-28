@@ -16,8 +16,9 @@ const createVehicle = async (req, res) => {
             }
         } 
         const vehicle = await Vehicle.create(data);
-        console.log(vehicle);
-        return res.status(201).json(vehicle);
+        const populated = await vehicle.populate({ path: 'assignedDriver', select: 'username role' });
+        console.log(populated);
+        return res.status(201).json(populated);
          
         
     } catch (err) {
@@ -39,7 +40,7 @@ const createVehicle = async (req, res) => {
 //@access admin/manager
 const getVehicles = async (req, res) => {
     try {
-        const vehicles = await Vehicle.find({});
+        const vehicles = await Vehicle.find({}).populate({ path: 'assignedDriver', select: 'username role' });
         return res.status(200).json(vehicles);
     } catch (err) {
         return res.status(500).json({ message: err.message });
@@ -57,7 +58,7 @@ const getVehicleById = async (req, res) => {
         if (!mongoose.isValidObjectId(id)) {
             return res.status(400).json({ message: 'Invalid vehicle id' });
         }
-        const vehicle = await Vehicle.findById(id);
+        const vehicle = await Vehicle.findById(id).populate({ path: 'assignedDriver', select: 'username role' });
         if (!vehicle) {
             return res.status(404).json({ message: 'Vehicle not found' });
         }
@@ -76,7 +77,8 @@ const updateVehicle = async (req, res) => {
         if (!mongoose.isValidObjectId(id)) {
             return res.status(400).json({ message: 'Invalid vehicle id' });
         }
-        const updatedVehicle = await Vehicle.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
+        const updatedVehicle = await Vehicle.findByIdAndUpdate(id, req.body, { new: true, runValidators: true })
+            .populate({ path: 'assignedDriver', select: 'username role' });
         if (!updatedVehicle) {
             return res.status(404).json({ message: 'Vehicle not found' });
         }

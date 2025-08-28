@@ -1,4 +1,3 @@
-
 const Vehicle = require('../models/vehicleModel');
 const User = require('../models/userModel');
 const PerDiemRequest = require('../models/perDiemRequest');
@@ -168,10 +167,32 @@ const deletePerDiemRequest = async (req, res) => {
     }
 }
 
+//@desc Get per diem requests for the current user
+//@route GET /api/per-diem/my
+//@access private (driver)
+const getMyPerDiemRequests = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const requests = await PerDiemRequest.find({ requestedBy: userId })
+            .populate('vehicleId', 'plateNumber model');
+
+        if (!requests || requests.length === 0) {
+            return res.status(404).json({ message: "No per diem requests found for this user" });
+        }
+
+        res.status(200).json(requests);
+    } catch (error) {
+        console.error("Error fetching user per diem requests:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 module.exports = {
     createPerDiemRequest,
     getPerDiemRequests,
     getPerDiemRequestById,
     updatePerDiemRequest,
-    deletePerDiemRequest
+    deletePerDiemRequest,
+    getMyPerDiemRequests
 };

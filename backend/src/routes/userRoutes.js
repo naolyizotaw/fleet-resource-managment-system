@@ -1,11 +1,33 @@
 const express = require("express");
 const { verifyToken } = require('../middlewares/authMiddleware');
 const authorizeRoles = require("../middlewares/roleMiddleware");
+const User = require('../models/userModel');
 
 
 const router = express.Router();
 
-// only for Admin 
+// Admin: list all users
+router.get('/', verifyToken, authorizeRoles('admin'), async (req, res) => {
+    try {
+        const users = await User.find({}, { password: 0 });
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to fetch users' });
+    }
+});
+
+// Admin: delete user by id
+router.delete('/:id', verifyToken, authorizeRoles('admin'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        await User.findByIdAndDelete(id);
+        res.json({ message: 'User deleted' });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to delete user' });
+    }
+});
+
+// only for Admin
 router.get("/admin", verifyToken, authorizeRoles("admin"), (req, res) => {
     res.json({message: "Welcome Admin!"})
 });

@@ -5,7 +5,8 @@ const {
     getPerDiemRequests,
     getPerDiemRequestById,
     updatePerDiemRequest,
-    deletePerDiemRequest
+    deletePerDiemRequest,
+    getMyPerDiemRequests
 } = require("../controllers/perDiemController");
 
 const { verifyToken } = require("../middlewares/authMiddleware");
@@ -15,7 +16,8 @@ const router = express.Router();
 
 router.use(verifyToken);
 
-router.post("/", authorizeRoles("driver", "manager", "admin"), createPerDiemRequest);
+router.post("/", authorizeRoles("driver", "manager", "admin", "user"), createPerDiemRequest);
+router.get("/my", authorizeRoles("driver", "user"), getMyPerDiemRequests);
 router.get("/", authorizeRoles("manager", "admin"), getPerDiemRequests);
 router.get("/:id", authorizeRoles("manager", "admin"), getPerDiemRequestById)
 router.put("/:id", authorizeRoles("manager", "admin"), updatePerDiemRequest);

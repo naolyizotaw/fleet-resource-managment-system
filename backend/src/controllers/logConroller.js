@@ -114,11 +114,32 @@ const deleteLog = async (req, res) => {
     }
 }
 
+//@desc Get logs for the current user
+//@route GET /api/logs/my
+//@access private (driver)
+const getMyLogs = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const logs = await DriverLog.find({ driverId: userId })
+            .populate('vehicleId', 'plateNumber');
+
+        if (!logs || logs.length === 0) {
+            return res.status(404).json({ message: "No logs found for this user" });
+        }
+
+        res.status(200).json(logs);
+    } catch (error) {
+        console.error("Error fetching user logs:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
 
 module.exports = {
     createLog,
     getLogs,
     getLogById,
     getLogByVehicle,
-    deleteLog
+    deleteLog,
+    getMyLogs
 };

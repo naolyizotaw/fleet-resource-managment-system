@@ -185,7 +185,26 @@ const deleteMaintenance = async (req, res) => {
   }
 }
 
+//@desc Get maintenance requests for the current user
+//@route GET /api/maintenance/my
+//@access private (driver)
+const getMyMaintenanceRequests = async (req, res) => {
+    try {
+        const userId = req.user.id;
 
+        const requests = await MaintenanceRequest.find({ requestedBy: userId })
+            .populate('vehicleId', 'plateNumber model');
+
+        if (!requests || requests.length === 0) {
+            return res.status(404).json({ message: "No maintenance requests found for this user" });
+        }
+
+        res.status(200).json(requests);
+    } catch (error) {
+        console.error("Error fetching user maintenance requests:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
 
 
 module.exports = {
@@ -193,7 +212,8 @@ module.exports = {
   getMaintenances,
   getMaintenanceById,
   updateMaintenance,  
-  deleteMaintenance
+  deleteMaintenance,
+  getMyMaintenanceRequests
 };
 
 

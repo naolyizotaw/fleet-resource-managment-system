@@ -5,7 +5,8 @@ const {
     getLogs,
     getLogById,
     getLogByVehicle,
-    deleteLog
+    deleteLog,
+    getMyLogs
 } = require("../controllers/logConroller");
 
 
@@ -19,6 +20,7 @@ const router = express.Router();
 router.use(verifyToken);
 
 router.post("/", authorizeRoles("driver", "manager", "admin"), createLog);
+router.get("/my", authorizeRoles("driver", "user"), getMyLogs);
 router.get("/", authorizeRoles("manager", "admin"), getLogs);
 router.get("/:id", authorizeRoles( "manager", "admin"), getLogById);
 router.get("/vehicle/:vehicleId", authorizeRoles("manager", "admin"), getLogByVehicle);

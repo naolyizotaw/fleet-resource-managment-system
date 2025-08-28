@@ -164,14 +164,34 @@ const deleteFuelRequest = async (req, res) => {
         console.error("Error Deleting fuel request:", err);
         return res.status(500).json({ message: 'Server error', error: err.message });
     }
-}
+};
 
+//@desc Get fuel requests for the current user
+//@route GET /api/fuel/my
+//@access private (driver)
+const getMyFuelRequests = async (req, res) => {
+    try {
+        const userId = req.user.id;
 
+        const requests = await FuelRequest.find({ requestedBy: userId })
+            .populate('vehicleId', 'plateNumber model');
+
+        if (!requests || requests.length === 0) {
+            return res.status(404).json({ message: "No fuel requests found for this user" });
+        }
+
+        res.status(200).json(requests);
+    } catch (error) {
+        console.error("Error fetching user fuel requests:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
 
 module.exports = {
     createFuelRequest,
     getFuelRequests,
     getFuelRequestById,
     updateFuelRequest,
-    deleteFuelRequest
+    deleteFuelRequest,
+    getMyFuelRequests
 };

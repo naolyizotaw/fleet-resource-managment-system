@@ -4,7 +4,8 @@ const {
     getMaintenances,
     getMaintenanceById,
     updateMaintenance,
-    deleteMaintenance
+    deleteMaintenance,
+    getMyMaintenanceRequests
 } = require("../controllers/maintenanceController");
 
 const { verifyToken } = require("../middlewares/authMiddleware");
@@ -16,10 +17,11 @@ const router = express.Router();
 router.use(verifyToken);
 
 // Create request: driver, manager, admin
-router.post("/", authorizeRoles("driver", "manager", "admin"), createMaintenance);
+router.post("/", authorizeRoles("driver", "manager", "admin", "user"), createMaintenance);
+router.get("/my", authorizeRoles("driver", "user"), getMyMaintenanceRequests);
 router.get("/", authorizeRoles("manager", "admin"), getMaintenances);
 router.get("/:id", getMaintenanceById);
-router.put("/:id", authorizeRoles("manager", "admin"), updateMaintenance);
+router.patch("/:id", authorizeRoles("manager", "admin"), updateMaintenance);
 router.delete("/:id", authorizeRoles("admin"), deleteMaintenance);
 
 
