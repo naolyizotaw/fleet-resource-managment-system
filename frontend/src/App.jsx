@@ -5,11 +5,12 @@ import LoginPage from './pages/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout';
 
+import Maintenance from './pages/Maintenance';
+import Fuel from './pages/Fuel';
+
 // Placeholder for the actual dashboard pages
 const DashboardHome = () => <h2>Dashboard Home</h2>;
 const Vehicles = () => <h2>Vehicles</h2>;
-const Maintenance = () => <h2>Maintenance</h2>;
-const Fuel = () => <h2>Fuel</h2>;
 const PerDiem = () => <h2>Per Diem</h2>;
 const DriverLogs = () => <h2>Driver Logs</h2>;
 const Reports = () => <h2>Reports</h2>;
