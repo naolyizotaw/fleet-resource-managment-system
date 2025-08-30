@@ -67,7 +67,11 @@ const createFuelRequest = async (req, res) => {
 //@access private (manager, admin)
 const getFuelRequests = async (req, res) => {
     try{
-        const fuelRequests = await FuelRequest.find({});
+        const fuelRequests = await FuelRequest.find({})
+            .populate('vehicleId', 'plateNumber manufacturer model year')
+            .populate('driverId', 'username')
+            .populate('requestedBy', 'username')
+            .populate('approvedBy', 'username');
         return res.status(200).json(fuelRequests);
     } catch (err) {
         console.error("Error fetching fuel requests:", err);
@@ -84,7 +88,11 @@ const getFuelRequestById = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: 'Invalid fuel request ID format' });
         }
-        const fuelRequest = await FuelRequest.findById(id);
+        const fuelRequest = await FuelRequest.findById(id)
+            .populate('vehicleId', 'plateNumber manufacturer model year')
+            .populate('driverId', 'username')
+            .populate('requestedBy', 'username')
+            .populate('approvedBy', 'username');
         if (!fuelRequest) {
             return res.status(404).json({ message: 'Fuel request not found' });
         }
@@ -101,47 +109,104 @@ const getFuelRequestById = async (req, res) => {
 const updateFuelRequest = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status, cost } = req.body;
-
-       
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: 'Invalid fuel request ID format' });
         }
+
         const fuelRequest = await FuelRequest.findById(id);
         if (!fuelRequest) {
             return res.status(404).json({ message: 'Fuel request not found' });
         }
 
-        
-        if (fuelRequest.status !== 'pending') {
-            return res.status(400).json({ message: `This request has already been ${fuelRequest.status}.` });
-        }
+        const isAdminOrManager = req.user.role === 'admin' || req.user.role === 'manager';
+        const isOwner = String(fuelRequest.requestedBy) === String(req.user.id);
 
-      
-        if (status === 'approved') {
-            fuelRequest.status = 'approved';
-            fuelRequest.approvedBy = req.user.id; 
-            fuelRequest.issuedDate = new Date();
-            if (cost !== undefined) {
-                fuelRequest.cost = cost;
+        // If a status change is requested, only admin/manager can do it
+        if (Object.prototype.hasOwnProperty.call(req.body, 'status')) {
+            const { status, cost } = req.body;
+
+            if (!isAdminOrManager) {
+                return res.status(403).json({ message: 'Only managers/admins can change status' });
             }
-        } else if (status === 'rejected') {
-            fuelRequest.status = 'rejected';
-            fuelRequest.approvedBy = req.user.id; 
-        } else {
-            return res.status(400).json({ message: "Invalid status. Must be 'approved' or 'rejected'." });
+
+            if (fuelRequest.status !== 'pending') {
+                return res.status(400).json({ message: `This request has already been ${fuelRequest.status}.` });
+            }
+
+            if (status === 'approved') {
+                fuelRequest.status = 'approved';
+                fuelRequest.approvedBy = req.user.id;
+                fuelRequest.issuedDate = new Date();
+                if (cost !== undefined) fuelRequest.cost = cost;
+            } else if (status === 'rejected') {
+                fuelRequest.status = 'rejected';
+                fuelRequest.approvedBy = req.user.id;
+            } else {
+                return res.status(400).json({ message: "Invalid status. Must be 'approved' or 'rejected'." });
+            }
+
+            await fuelRequest.save();
+
+            const populated = await FuelRequest.findById(id)
+                .populate('vehicleId', 'plateNumber manufacturer model year')
+                .populate('driverId', 'username')
+                .populate('requestedBy', 'username')
+                .populate('approvedBy', 'username');
+
+            return res.status(200).json({ message: `Fuel request has been ${status}.`, fuelRequest: populated });
         }
 
+        // Otherwise, treat as a form edit of allowed fields
+        if (!isAdminOrManager && !isOwner) {
+            return res.status(403).json({ message: 'Not authorized to edit this request' });
+        }
+
+        if (fuelRequest.status !== 'pending') {
+            return res.status(400).json({ message: `Only pending requests can be edited.` });
+        }
+
+        const allowed = ['vehicleId', 'fuelType', 'quantity', 'currentKm', 'purpose', 'cost'];
+        const updates = {};
+        for (const key of allowed) {
+            if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+                updates[key] = req.body[key];
+            }
+        }
+
+        // Don't overwrite vehicleId with empty values
+        if (Object.prototype.hasOwnProperty.call(updates, 'vehicleId') && !updates.vehicleId) {
+            delete updates.vehicleId;
+        }
+
+        // Validate vehicle if changed
+        if (updates.vehicleId) {
+            if (!mongoose.Types.ObjectId.isValid(updates.vehicleId)) {
+                return res.status(400).json({ message: 'Invalid vehicle ID format' });
+            }
+            const vehicle = await Vehicle.findById(updates.vehicleId);
+            if (!vehicle) return res.status(404).json({ message: 'Vehicle not found' });
+        }
+
+        // Apply updates
+        Object.assign(fuelRequest, updates);
         await fuelRequest.save();
 
-        return res.status(200).json({
-            message: `Fuel request has been ${status}.`,
-            fuelRequest
-        });
+        // Also update vehicle.currentKm if provided
+        if (updates.currentKm && fuelRequest.vehicleId) {
+            await Vehicle.findByIdAndUpdate(fuelRequest.vehicleId, { currentKm: updates.currentKm });
+        }
 
+        const populated = await FuelRequest.findById(id)
+            .populate('vehicleId', 'plateNumber manufacturer model year')
+            .populate('driverId', 'username')
+            .populate('requestedBy', 'username')
+            .populate('approvedBy', 'username');
+
+    return res.status(200).json({ message: 'Fuel request updated successfully', fuelRequest: populated });
     } catch (err) {
-        console.error("Error updating fuel request:", err);
-        return res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('Error updating fuel request:', err);
+    const status = err.name === 'ValidationError' ? 400 : 500;
+    return res.status(status).json({ message: err.message });
     }
 };
 
@@ -174,7 +239,10 @@ const getMyFuelRequests = async (req, res) => {
         const userId = req.user.id;
 
         const requests = await FuelRequest.find({ requestedBy: userId })
-            .populate('vehicleId', 'plateNumber model');
+            .populate('vehicleId', 'plateNumber manufacturer model year')
+            .populate('driverId', 'username')
+            .populate('requestedBy', 'username')
+            .populate('approvedBy', 'username');
 
         if (!requests || requests.length === 0) {
             return res.status(404).json({ message: "No fuel requests found for this user" });

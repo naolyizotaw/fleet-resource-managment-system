@@ -23,6 +23,11 @@ const maintenanceRequestSchema = new mongoose.Schema(
         "Other",
       ],
     },
+    priority: {
+      type: String,
+      enum: ["low", "medium", "high"],
+      default: "medium",
+    },
     description: {
       type: String,
       required: true,

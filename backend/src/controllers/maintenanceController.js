@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 //@access driver, manager, admin
 const createMaintenance = async (req, res) => {
   try {
-    const { vehicleId, category, description } = req.body;
+  const { vehicleId, category, description, priority } = req.body;
 
     if (!vehicleId || !category || !description) {
       return res.status(400).json({ 
@@ -43,7 +43,8 @@ const createMaintenance = async (req, res) => {
       driverId: vehicle.assignedDriver || null,   
       requestedBy: req.user.id,
       category,
-      description,
+  description,
+  priority: priority || 'medium',
     });
 
     await request.save();

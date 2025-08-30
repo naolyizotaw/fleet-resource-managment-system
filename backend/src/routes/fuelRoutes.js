@@ -21,7 +21,8 @@ router.post("/", authorizeRoles("driver", "manager", "admin", "user"), createFue
 router.get("/my", authorizeRoles("driver", "user"), getMyFuelRequests);
 router.get("/", authorizeRoles("manager", "admin"), getFuelRequests);
 router.get("/:id", authorizeRoles( "manager", "admin"), getFuelRequestById);
-router.put("/:id", authorizeRoles("manager", "admin"), updateFuelRequest);
+// Allow all authenticated roles to hit the endpoint; controller enforces fine-grained permissions
+router.put("/:id", authorizeRoles("driver", "user", "manager", "admin"), updateFuelRequest);
 router.delete("/:id", authorizeRoles("admin"), deleteFuelRequest);
 
 

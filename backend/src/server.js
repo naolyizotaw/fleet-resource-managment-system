@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv").config();
 const dbConnect = require("./config/dbConnect");
 const authRoutes = require('./routes/authRoutes');
+const cors = require('cors');
 
 const userRoutes = require('./routes/userRoutes');
 const vehicleRoutes = require('./routes/vehicleRoutes');
@@ -12,11 +13,12 @@ const logRoutes = require('./routes/logRoutes');
 
 
 const app = express();
+app.use(cors());
 dbConnect();
 
 //Middleware 
 app.use(express.json());
-a
+
 
 
 //Routes
