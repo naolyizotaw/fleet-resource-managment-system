@@ -70,7 +70,11 @@ const createPerDiemRequest = async (req, res) => {
 //@access private (manager, admin)
 const getPerDiemRequests = async (req, res) => {
     try{
-        const perDiemRequest = await PerDiemRequest.find({});
+        const perDiemRequest = await PerDiemRequest.find({})
+            .populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'username email' } })
+            .populate('approvedBy', 'username email')
+            .populate('driverId', 'username email')
+            .populate('requestedBy', 'username email');
         return res.status(200).json(perDiemRequest);
     } catch (err) {
         console.error("Error fetching per-diem requests:", err);
@@ -88,11 +92,15 @@ const getPerDiemRequestById = async (req, res) => {
          if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: 'Invalid perdiam request ID format' });
          }
-        const perDiamRequest = await PerDiemRequest.findById(id);
+        const perDiamRequest = await PerDiemRequest.findById(id)
+            .populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'username email' } })
+            .populate('approvedBy', 'username email')
+            .populate('driverId', 'username email')
+            .populate('requestedBy', 'username email');
         if (!perDiamRequest) {
             return res.status(404).json({ message: 'Per-diam request not found' });
         }
-        return res.status(200).json(fuelRequest);
+        return res.status(200).json(perDiamRequest);
     } catch (err) {
         console.error("Error fetching Per-diam request by ID:", err);
         return res.status(500).json({ message: 'Server error', error: err.message });
@@ -105,43 +113,60 @@ const getPerDiemRequestById = async (req, res) => {
 const updatePerDiemRequest = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status, cost } = req.body;
+        const { status, ...otherUpdatableFields } = req.body;
 
-       
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: 'Invalid Per Diem request ID format' });
         }
+
         const perDiemRequest = await PerDiemRequest.findById(id);
         if (!perDiemRequest) {
             return res.status(404).json({ message: 'Per Diem request not found' });
         }
 
-        if (perDiemRequest.status !== 'pending') {
-            return res.status(400).json({ message: `This request has already been ${perDiemRequest.status}.` });
+        let message = 'Per Diem request updated successfully.';
+
+        // Handle status updates (approval/rejection)
+        if (status) {
+            if (perDiemRequest.status !== 'pending') {
+                return res.status(400).json({ message: `This request has already been ${perDiemRequest.status}.` });
+            }
+            if (status === 'approved') {
+                perDiemRequest.status = 'approved';
+                perDiemRequest.approvedBy = req.user.id;
+                perDiemRequest.issuedDate = new Date();
+                message = `Per-Diem request has been approved.`;
+            } else if (status === 'rejected') {
+                perDiemRequest.status = 'rejected';
+                perDiemRequest.approvedBy = req.user.id;
+                message = `Per-Diem request has been rejected.`;
+            } else {
+                return res.status(400).json({ message: "Invalid status. Must be 'approved' or 'rejected'." });
+            }
         }
 
-      
-        if (status === 'approved') {
-            perDiemRequest.status = 'approved';
-            perDiemRequest.approvedBy = req.user.id; 
-            perDiemRequest.issuedDate = new Date();
-
-        } else if (status === 'rejected') {
-            perDiemRequest.status = 'rejected';
-            perDiemRequest.approvedBy = req.user.id; 
-        } else {
-            return res.status(400).json({ message: "Invalid status. Must be 'approved' or 'rejected'." });
+        // Handle other field updates for editable requests
+        if (Object.keys(otherUpdatableFields).length > 0) {
+            // Allow edits only if the request is pending or if the user is an admin
+            if (perDiemRequest.status !== 'pending' && req.user.role !== 'admin') {
+                return res.status(403).json({ message: 'Cannot edit a request that is not pending.' });
+            }
+            Object.assign(perDiemRequest, otherUpdatableFields);
         }
 
-        await perDiemRequest.save();
+    const updatedRequest = await perDiemRequest.save();
+    await updatedRequest.populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'username email' } });
+    await updatedRequest.populate('approvedBy', 'username email');
+    await updatedRequest.populate('driverId', 'username email');
+    await updatedRequest.populate('requestedBy', 'username email');
 
-        return res.status(200).json({
-            message: `Per-Diem request has been ${status}.`,
-            perDiemRequest
-        });
+        return res.status(200).json(updatedRequest);
 
     } catch (err) {
         console.error("Error updating per diem request:", err);
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ message: 'Validation failed', error: err.message });
+        }
         return res.status(500).json({ message: 'Server error', error: err.message });
     }
 }
@@ -175,7 +200,10 @@ const getMyPerDiemRequests = async (req, res) => {
         const userId = req.user.id;
 
         const requests = await PerDiemRequest.find({ requestedBy: userId })
-            .populate('vehicleId', 'plateNumber model');
+            .populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'username email' } })
+            .populate('approvedBy', 'username email')
+            .populate('driverId', 'username email')
+            .populate('requestedBy', 'username email');
 
         if (!requests || requests.length === 0) {
             return res.status(404).json({ message: "No per diem requests found for this user" });

@@ -13,14 +13,25 @@ const authorizeRoles = require("../middlewares/roleMiddleware");
 
 const router = express.Router();
 
-// Only admin and manager can access everything in this router
-router.use(verifyToken, authorizeRoles("admin", "manager"));
-
-router.post("/", createVehicle);
-router.get("/", getVehicles);
-router.get("/:id", getVehicleById);
-router.put("/:id", updateVehicle);
-router.delete("/:id", deleteVehicle);
+// Per-route auth: allow drivers to fetch their vehicles, others limited
+router.post("/", verifyToken, authorizeRoles("admin", "manager"), createVehicle);
+router.get("/", verifyToken, authorizeRoles("admin", "manager"), getVehicles);
+// Add a route for drivers/users to get their assigned vehicle(s)
+router.get("/mine", verifyToken, authorizeRoles("admin", "manager", "driver", "user"), async (req, res) => {
+    try {
+        const Vehicle = require("../models/vehicleModel");
+        const query = (req.user.role === 'admin' || req.user.role === 'manager')
+            ? {}
+            : { assignedDriver: req.user.id };
+        const vehicles = await Vehicle.find(query).populate({ path: 'assignedDriver', select: 'username role' });
+        return res.status(200).json(vehicles);
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+});
+router.get("/:id", verifyToken, authorizeRoles("admin", "manager"), getVehicleById);
+router.put("/:id", verifyToken, authorizeRoles("admin", "manager"), updateVehicle);
+router.delete("/:id", verifyToken, authorizeRoles("admin", "manager"), deleteVehicle);
 
 
 

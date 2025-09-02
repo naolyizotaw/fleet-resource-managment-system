@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { perDiemAPI, vehiclesAPI } from '../services/api';
-import { Receipt, Plus, Search, Filter, Truck, AlertCircle, CheckCircle, Clock, Calendar } from 'lucide-react';
+import { Receipt, Plus, Search, Filter, Truck, AlertCircle, CheckCircle, Clock, Calendar, Edit, Trash2, ThumbsUp, ThumbsDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const PerDiem = () => {
@@ -15,31 +15,39 @@ const PerDiem = () => {
   const [editingRequest, setEditingRequest] = useState(null);
 
   const [formData, setFormData] = useState({
-    vehicleId: '',
-    tripDate: '',
-    destination: '',
-    amount: '',
-    notes: '',
+  vehicleId: '',
+  purpose: '',
+  destination: '',
+  startDate: '',
+  endDate: '',
+  numberOfDays: 1,
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = React.useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      let perDiemRes;
-      
-      if (user.role === 'admin' || user.role === 'manager') {
-        perDiemRes = await perDiemAPI.getAll();
-      } else {
-        perDiemRes = await perDiemAPI.getMyRequests();
+  let perDiemData = [];
+      try {
+        if (user.role === 'admin' || user.role === 'manager') {
+          const res = await perDiemAPI.getAll();
+          perDiemData = res.data;
+        } else {
+          const res = await perDiemAPI.getMyRequests();
+          perDiemData = res.data;
+        }
+      } catch (err) {
+        if (err?.response?.status === 404) {
+          perDiemData = [];
+        } else {
+          throw err;
+        }
       }
-      
-      const vehiclesRes = await vehiclesAPI.getAll();
-      
-      setRequests(perDiemRes.data);
+
+      const vehiclesRes = (user.role === 'admin' || user.role === 'manager')
+        ? await vehiclesAPI.getAll()
+        : await vehiclesAPI.getMine();
+
+      setRequests(perDiemData);
       setVehicles(vehiclesRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -47,19 +55,26 @@ const PerDiem = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.role]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     try {
       if (editingRequest) {
-        await perDiemAPI.update(editingRequest._id, formData);
-        setRequests(requests.map(r => r._id === editingRequest._id ? { ...r, ...formData } : r));
+        const response = await perDiemAPI.update(editingRequest._id, formData);
+        setRequests(requests.map(r => r._id === editingRequest._id ? response.data : r));
         toast.success('Per diem request updated successfully');
       } else {
         const response = await perDiemAPI.create(formData);
-        setRequests([...requests, response.data]);
+        const created = response.data?.perDiemRequest || response.data; // controller returns { message, perDiemRequest }
+        setRequests([...requests, created]);
         toast.success('Per diem request created successfully');
       }
       
@@ -75,19 +90,21 @@ const PerDiem = () => {
   const handleEdit = (request) => {
     setEditingRequest(request);
     setFormData({
-      vehicleId: request.vehicleId || '',
-      tripDate: request.tripDate ? new Date(request.tripDate).toISOString().split('T')[0] : '',
-      destination: request.destination || '',
-      amount: request.amount || '',
-      notes: request.notes || '',
+  vehicleId: (typeof request.vehicleId === 'object' ? request.vehicleId?._id : request.vehicleId) || '',
+  purpose: request.purpose || '',
+  destination: request.destination || '',
+  startDate: request.startDate ? new Date(request.startDate).toISOString().split('T')[0] : '',
+  endDate: request.endDate ? new Date(request.endDate).toISOString().split('T')[0] : '',
+  numberOfDays: request.numberOfDays ?? 1,
     });
     setShowModal(true);
   };
 
   const handleStatusUpdate = async (requestId, newStatus) => {
     try {
-      await perDiemAPI.update(requestId, { status: newStatus });
-      setRequests(requests.map(r => r._id === requestId ? { ...r, status: newStatus } : r));
+  const response = await perDiemAPI.update(requestId, { status: newStatus });
+  const updated = response.data;
+  setRequests(requests.map(r => r._id === requestId ? updated : r));
       toast.success('Status updated successfully');
     } catch (error) {
       console.error('Error updating status:', error);
@@ -95,15 +112,46 @@ const PerDiem = () => {
     }
   };
 
+  const handleDelete = async (requestId) => {
+    const confirmed = window.confirm('Are you sure you want to delete this per diem request?');
+    if (!confirmed) return;
+    try {
+      await perDiemAPI.delete(requestId);
+      setRequests(prev => prev.filter(r => r._id !== requestId));
+      toast.success('Per diem request deleted');
+    } catch (error) {
+      console.error('Error deleting per diem request:', error);
+      const msg = error?.response?.data?.message || 'Failed to delete per diem request';
+      toast.error(msg);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       vehicleId: '',
-      tripDate: '',
+      purpose: '',
       destination: '',
-      amount: '',
-      notes: '',
+      startDate: '',
+      endDate: '',
+      numberOfDays: 1,
     });
   };
+
+  // Auto-calculate numberOfDays when dates change
+  useEffect(() => {
+    if (formData.startDate && formData.endDate) {
+      const start = new Date(formData.startDate);
+      const end = new Date(formData.endDate);
+      if (!isNaN(start) && !isNaN(end) && end >= start) {
+        const msPerDay = 1000 * 60 * 60 * 24;
+        const days = Math.floor((end - start) / msPerDay) + 1; // inclusive days
+        if (days > 0 && days !== formData.numberOfDays) {
+          setFormData((prev) => ({ ...prev, numberOfDays: days }));
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.startDate, formData.endDate]);
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -131,11 +179,20 @@ const PerDiem = () => {
     }
   };
 
+  const getVehicleFromRequest = (request) => {
+    if (request.vehicleId && typeof request.vehicleId === 'object') return request.vehicleId;
+    return vehicles.find(v => v._id === request.vehicleId);
+  };
+
   const filteredRequests = requests.filter(request => {
-    const matchesSearch = 
+    const vehicle = getVehicleFromRequest(request) || {};
+    const matchesSearch =
+      request.purpose?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.destination?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicles.find(v => v._id === request.vehicleId)?.make?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicles.find(v => v._id === request.vehicleId)?.model?.toLowerCase().includes(searchTerm.toLowerCase());
+      vehicle.manufacturer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicle.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicle.licensePlate?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicle.plateNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -208,7 +265,13 @@ const PerDiem = () => {
                   Vehicle
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Driver
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Trip Details
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Approval
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -240,30 +303,74 @@ const PerDiem = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {vehicles.find(v => v._id === request.vehicleId) ? (
-                      <div className="flex items-center">
-                        <Truck className="h-4 w-4 text-gray-400 mr-2" />
-                        <span className="text-sm text-gray-900">
-                          {vehicles.find(v => v._id === request.vehicleId)?.year} {' '}
-                          {vehicles.find(v => v._id === request.vehicleId)?.make} {' '}
-                          {vehicles.find(v => v._id === request.vehicleId)?.model}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-500">Unknown Vehicle</span>
-                    )}
+                    {(() => {
+                      const vehicle = getVehicleFromRequest(request);
+                      return vehicle ? (
+                        <div className="flex items-center">
+                          <Truck className="h-4 w-4 text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-900">
+                            {vehicle.year ? `${vehicle.year} ` : ''}
+                            {vehicle.manufacturer || ''} {vehicle.model || ''}
+                            {vehicle.licensePlate ? ` - ${vehicle.licensePlate}` : vehicle.plateNumber ? ` - ${vehicle.plateNumber}` : ''}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-500">Unknown Vehicle</span>
+                      );
+                    })()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {(() => {
+                        const vehicle = getVehicleFromRequest(request) || {};
+                        const ad = vehicle.assignedDriver;
+                        if (ad) {
+                          const id = typeof ad === 'object' ? ad._id : ad;
+                          if (id === user.id) return 'You';
+                          return typeof ad === 'object' ? (ad.username || ad.email || ad._id) : ad;
+                        }
+                        const d = request.driverId;
+                        if (!d) return '—';
+                        const id = typeof d === 'object' ? d._id : d;
+                        if (id === user.id) return 'You';
+                        return typeof d === 'object' ? (d.username || d.email || d._id) : d;
+                      })()}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                        {request.tripDate ? new Date(request.tripDate).toLocaleDateString() : 'N/A'}
+                        {request.startDate ? new Date(request.startDate).toLocaleDateString() : 'N/A'}
+                        {' - '}
+                        {request.endDate ? new Date(request.endDate).toLocaleDateString() : 'N/A'}
+                        {request.numberOfDays ? <span className="ml-2 text-gray-500">({request.numberOfDays} day{request.numberOfDays > 1 ? 's' : ''})</span> : null}
+                      </div>
+                      <div className="text-gray-700 font-medium">
+                        {request.purpose || '—'}
                       </div>
                       <div className="text-gray-500">
-                        {request.destination}
+                        {request.destination || '—'}
                       </div>
                       <div className="text-gray-500">
-                        ${request.amount}
+                        Calc: {request.calculatedAmount ?? '—'}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      <div className="text-gray-700">
+                        Approved: {request.approvedAmount ?? '—'}
+                      </div>
+                      <div className="text-gray-500">
+                        {request.approvedBy ? (
+                          <>
+                            By: {typeof request.approvedBy === 'object' ? (request.approvedBy.username || request.approvedBy.email || request.approvedBy._id) : request.approvedBy}
+                          </>
+                        ) : 'By: —'}
+                      </div>
+                      <div className="text-gray-500">
+                        Issued: {request.issuedDate ? new Date(request.issuedDate).toLocaleDateString() : '—'}
                       </div>
                     </div>
                   </td>
@@ -273,29 +380,50 @@ const PerDiem = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleEdit(request)}
+                          className="flex items-center justify-center w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 shadow-sm"
+                          title="Edit"
+                          aria-label="Edit"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        {user.role === 'admin' && (
+                          <button
+                            onClick={() => handleDelete(request._id)}
+                            className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 shadow-sm"
+                            title="Delete"
+                            aria-label="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+
                       {(user.role === 'admin' || user.role === 'manager') && request.status === 'pending' && (
-                        <>
+                        <div className="flex items-center space-x-2">
                           <button
                             onClick={() => handleStatusUpdate(request._id, 'approved')}
-                            className="text-green-600 hover:text-green-900"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-green-200 bg-green-50 text-green-700 text-xs font-medium hover:bg-green-100"
+                            title="Approve"
+                            aria-label="Approve"
                           >
-                            Approve
+                            <ThumbsUp className="h-3 w-3" />
+                            <span>Approve</span>
                           </button>
                           <button
                             onClick={() => handleStatusUpdate(request._id, 'rejected')}
-                            className="text-red-600 hover:text-red-900"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-red-200 bg-red-50 text-red-700 text-xs font-medium hover:bg-red-100"
+                            title="Reject"
+                            aria-label="Reject"
                           >
-                            Reject
+                            <ThumbsDown className="h-3 w-3" />
+                            <span>Reject</span>
                           </button>
-                        </>
+                        </div>
                       )}
-                      <button
-                        onClick={() => handleEdit(request)}
-                        className="text-primary-600 hover:text-primary-900"
-                      >
-                        Edit
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -340,35 +468,55 @@ const PerDiem = () => {
                       required
                     >
                       <option value="">Select Vehicle</option>
-                      {vehicles.map(vehicle => (
+                {vehicles.map(vehicle => (
                         <option key={vehicle._id} value={vehicle._id}>
-                          {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.licensePlate || 'No Plate'}
+                  {vehicle.year} {vehicle.manufacturer} {vehicle.model} - {vehicle.licensePlate || vehicle.plateNumber || 'No Plate'}
                         </option>
                       ))}
                     </select>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Purpose</label>
+                    <input
+                      type="text"
+                      value={formData.purpose}
+                      onChange={(e) => setFormData({...formData, purpose: e.target.value})}
+                      className="input-field mt-1"
+                      placeholder="Enter purpose..."
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Trip Date</label>
+                      <label className="block text-sm font-medium text-gray-700">Start Date</label>
                       <input
                         type="date"
-                        value={formData.tripDate}
-                        onChange={(e) => setFormData({...formData, tripDate: e.target.value})}
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({...formData, startDate: e.target.value})}
                         className="input-field mt-1"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Amount ($)</label>
+                      <label className="block text-sm font-medium text-gray-700">End Date</label>
+                      <input
+                        type="date"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                        className="input-field mt-1"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Number of Days</label>
                       <input
                         type="number"
-                        value={formData.amount}
-                        onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                        value={formData.numberOfDays}
+                        onChange={(e) => setFormData({...formData, numberOfDays: Number(e.target.value) })}
                         className="input-field mt-1"
-                        placeholder="0.00"
-                        min="0"
-                        step="0.01"
+                        min="1"
                         required
                       />
                     </div>
@@ -383,17 +531,6 @@ const PerDiem = () => {
                       className="input-field mt-1"
                       placeholder="Enter destination..."
                       required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Notes</label>
-                    <textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                      className="input-field mt-1"
-                      rows="3"
-                      placeholder="Any additional information..."
                     />
                   </div>
                 </form>

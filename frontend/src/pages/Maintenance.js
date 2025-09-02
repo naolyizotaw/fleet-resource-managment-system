@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { maintenanceAPI, vehiclesAPI, usersAPI } from '../services/api';
-import { Wrench, Plus, Search, Filter, Truck, AlertCircle, CheckCircle, Clock, Edit, Trash2 } from 'lucide-react';
+import { Wrench, Plus, Search, Filter, Truck, Edit, Trash2, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Maintenance = () => {
@@ -134,8 +134,8 @@ const Maintenance = () => {
 
   const handleStatusUpdate = async (requestId, newStatus) => {
     try {
-      await maintenanceAPI.update(requestId, { status: newStatus });
-      setRequests(requests.map(r => r._id === requestId ? { ...r, status: newStatus } : r));
+      const response = await maintenanceAPI.update(requestId, { status: newStatus });
+      setRequests(requests.map(r => r._id === requestId ? response.data : r));
       toast.success('Status updated successfully');
     } catch (error) {
       console.error('Error updating status:', error);
