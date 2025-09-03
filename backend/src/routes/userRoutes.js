@@ -2,6 +2,7 @@ const express = require("express");
 const { verifyToken } = require('../middlewares/authMiddleware');
 const authorizeRoles = require("../middlewares/roleMiddleware");
 const User = require('../models/userModel');
+const { updateUser } = require('../controllers/authController');
 
 
 const router = express.Router();
@@ -37,34 +38,8 @@ router.delete('/:id', verifyToken, authorizeRoles('admin'), async (req, res) => 
     }
 });
 
-// Admin: update user by id (username, role)
-router.put('/:id', verifyToken, authorizeRoles('admin'), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { username, role } = req.body;
-
-        const update = {};
-        if (username !== undefined) update.username = username;
-        if (role !== undefined) update.role = role;
-
-        const updated = await User.findByIdAndUpdate(
-            id,
-            { $set: update },
-            { new: true, runValidators: true, select: '-password' }
-        );
-
-        if (!updated) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        res.json(updated);
-    } catch (err) {
-        if (err && err.code === 11000) {
-            return res.status(409).json({ message: 'Username already exists' });
-        }
-        res.status(500).json({ message: 'Failed to update user' });
-    }
-});
+// Admin: update user by id (allow updating common profile fields)
+router.put('/:id', verifyToken, authorizeRoles('admin'), updateUser);
 
 // only for Admin
 router.get("/admin", verifyToken, authorizeRoles("admin"), (req, res) => {

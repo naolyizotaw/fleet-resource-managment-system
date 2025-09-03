@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { usersAPI, authAPI } from '../services/api';
-import { Users as UsersIcon, Plus, Trash2, Edit, Search, Filter } from 'lucide-react';
+import { Users as UsersIcon, Plus, Trash2, Edit, Search, Filter, ChevronDown, Copy, Check, Mail, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Users = () => {
@@ -19,7 +19,12 @@ const Users = () => {
     username: '',
     password: '',
     confirmPassword: '',
-    role: 'user',
+  role: 'user',
+  fullName: '',
+  email: '',
+  phone: '',
+  department: '',
+  status: 'active',
   });
 
   useEffect(() => {
@@ -62,6 +67,11 @@ const Users = () => {
           username: formData.username,
           password: formData.password,
           role: formData.role,
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          department: formData.department,
+          status: formData.status,
         });
         toast.success('User created successfully');
         await fetchUsers(); // Refetch since register returns only a message
@@ -79,10 +89,15 @@ const Users = () => {
   const handleEdit = (userItem) => {
     setEditingUser(userItem);
     setFormData({
-      username: userItem.username || '',
-      password: '',
-      confirmPassword: '',
-      role: userItem.role || 'user',
+  username: userItem.username || '',
+  password: '',
+  confirmPassword: '',
+  role: userItem.role || 'user',
+  fullName: userItem.fullName || '',
+  email: userItem.email || '',
+  phone: userItem.phone || '',
+  department: userItem.department || '',
+  status: userItem.status || 'active',
     });
     setShowModal(true);
   };
@@ -92,7 +107,12 @@ const Users = () => {
       username: '',
       password: '',
       confirmPassword: '',
-      role: 'user',
+  role: 'user',
+  fullName: '',
+  email: '',
+  phone: '',
+  department: '',
+  status: 'active',
     });
   };
 
@@ -129,10 +149,105 @@ const Users = () => {
     }
   };
 
+  const getStatusBadgeColor = (status) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'suspended':
+        return 'bg-red-100 text-red-800';
+      case 'inactive':
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const [statusMenuOpenId, setStatusMenuOpenId] = useState(null);
+  const [copiedUsername, setCopiedUsername] = useState(null);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailModalUser, setEmailModalUser] = useState(null);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  // allowed statuses are defined inline where needed
+
+  const toggleStatusMenu = (id) => {
+    setStatusMenuOpenId(prev => (prev === id ? null : id));
+  };
+
+  const handleChangeStatus = async (id, newStatus) => {
+    // prevent changing to same status
+    const userItem = users.find(u => u._id === id);
+    if (!userItem || userItem.status === newStatus) {
+      setStatusMenuOpenId(null);
+      return;
+    }
+
+    // optimistic update
+    const prevUsers = [...users];
+    setUsers(prev => prev.map(u => u._id === id ? { ...u, status: newStatus } : u));
+    setStatusMenuOpenId(null);
+
+    try {
+      await usersAPI.update(id, { status: newStatus });
+      toast.success('Status updated');
+    } catch (err) {
+      console.error('Failed to update status', err);
+      // rollback
+      setUsers(prevUsers);
+      toast.error(err.response?.data?.message || 'Failed to update status');
+    }
+  };
+
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text || '');
+  setCopiedUsername(text);
+  toast.success('Username copied');
+  // clear visual feedback after 2s
+  setTimeout(() => setCopiedUsername(null), 2000);
+    } catch (err) {
+      console.error('Copy failed', err);
+      toast.error('Failed to copy');
+    }
+  };
+
+  const openEmailModal = (userItem) => {
+    setEmailModalUser(userItem);
+    setEmailSubject('');
+    setEmailBody('');
+    setEmailModalOpen(true);
+  };
+
+  const closeEmailModal = () => {
+    setEmailModalOpen(false);
+    setEmailModalUser(null);
+    setEmailSubject('');
+    setEmailBody('');
+  };
+
+  const handleSendEmail = (e) => {
+    e?.preventDefault?.();
+    if (!emailModalUser || !emailModalUser.email) {
+      toast.error('No recipient email');
+      return;
+    }
+    const mailto = `mailto:${emailModalUser.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    // open user's mail client
+    window.location.href = mailto;
+    toast.success('Opening mail client');
+    closeEmailModal();
+  };
+
   const filteredUsers = users.filter(userItem => {
-    const matchesSearch = userItem.username.toLowerCase().includes(searchTerm.toLowerCase());
+    const q = (searchTerm || '').toLowerCase();
     const matchesRole = roleFilter === 'all' || userItem.role === roleFilter;
-    return matchesSearch && matchesRole;
+    if (!q) return matchesRole;
+
+    const combined = [userItem.fullName, userItem.username, userItem.email, userItem.phone, userItem.department]
+      .filter(Boolean).map(s => String(s).toLowerCase()).join(' ');
+
+    return matchesRole && combined.includes(q);
   });
 
   if (loading) {
@@ -201,62 +316,146 @@ const Users = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="table-header">
-                  User
-                </th>
-                <th className="table-header">
-                  Role
-                </th>
-                <th className="table-header">
-                  Created
-                </th>
-                <th className="table-header">
-                  Actions
-                </th>
+                <th className="table-header">Full Name</th>
+                <th className="table-header">Username</th>
+                <th className="table-header">Role</th>
+                <th className="table-header">Email</th>
+                <th className="table-header">Phone</th>
+                <th className="table-header">Department</th>
+                <th className="table-header">Status</th>
+                <th className="table-header">Created</th>
+                <th className="table-header">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.map((userItem) => (
                 <tr key={userItem._id} className="hover:bg-gray-50">
                   <td className="table-cell">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-primary-600">
-                          {userItem.username.charAt(0).toUpperCase()}
-                        </span>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                        <User className="h-4 w-4 text-primary-600" />
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {userItem.username}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          ID: {userItem._id.slice(-6)}
-                        </div>
+
+                      <div className="flex-1 min-w-0">
+                        <button onClick={() => handleEdit(userItem)} className="text-sm font-medium text-gray-900 hover:underline text-left truncate">
+                          {userItem.fullName || '—'}
+                        </button>
                       </div>
+
+                      {/* removed fullname copy button per request */}
                     </div>
                   </td>
                   <td className="table-cell">
-                    <span className={`status-badge ${getRoleBadgeColor(userItem.role)}`}>
-                      {userItem.role}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <button onClick={() => handleEdit(userItem)} className="text-sm font-medium text-gray-900 hover:underline">
+                          {'@' + ((userItem.username || '').toLowerCase())}
+                        </button>
+                        <button onClick={() => copyToClipboard(userItem.username)} className="text-gray-400 hover:text-gray-600 relative" title="Copy username" aria-label={`Copy username ${userItem.username}`}>
+                          {copiedUsername === userItem.username ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                          {copiedUsername === userItem.username && (
+                            <span className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1">Copied</span>
+                          )}
+                        </button>
+                      </div>
+                      <div className="text-sm text-gray-500">ID: {userItem._id?.slice(-6)}</div>
+                    </div>
                   </td>
                   <td className="table-cell">
-                    {new Date(userItem.createdAt).toLocaleDateString()}
+                    <span className={`status-badge ${getRoleBadgeColor(userItem.role)}`}>{userItem.role}</span>
+                  </td>
+                  <td className="table-cell">
+                    {userItem.email ? (
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => openEmailModal(userItem)}
+                          className="text-sm text-gray-900 hover:underline flex items-center space-x-1"
+                          title={`Compose email to ${userItem.email}`}
+                          aria-label={`Compose email to ${userItem.email}`}
+                        >
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <span>{userItem.email}</span>
+                        </button>
+
+                        <button onClick={() => copyToClipboard(userItem.email)} className="text-gray-400 hover:text-gray-600 relative" title="Copy email" aria-label={`Copy email ${userItem.email}`}>
+                          {copiedUsername === userItem.email ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                          {copiedUsername === userItem.email && (
+                            <span className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1">Copied</span>
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-900">—</div>
+                    )}
+                  </td>
+                  <td className="table-cell">
+                    <div className="text-sm text-gray-900">{userItem.phone || '—'}</div>
+                  </td>
+                  <td className="table-cell">
+                    <div className="text-sm text-gray-900">{userItem.department || '—'}</div>
+                  </td>
+                  <td className="table-cell relative">
+                    { (user.role === 'admin' || user.role === 'manager') && userItem._id !== user._id ? (
+                      <div className="relative inline-block text-left">
+                        <button
+                          type="button"
+                          onClick={() => toggleStatusMenu(userItem._id)}
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(userItem.status)}`}
+                          aria-expanded={statusMenuOpenId === userItem._id}
+                        >
+                          <span className="capitalize">{userItem.status || '—'}</span>
+                          <ChevronDown className="ml-1 h-3 w-3" />
+                        </button>
+
+                        {statusMenuOpenId === userItem._id && (
+                          <div className="origin-top-right absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                            <div className="py-1">
+                              {['active','pending','suspended','inactive'].map(s => (
+                                <button
+                                  key={s}
+                                  onClick={() => handleChangeStatus(userItem._id, s)}
+                                  className={`w-full text-left px-4 py-2 text-sm ${userItem.status === s ? 'font-semibold bg-gray-50' : 'hover:bg-gray-100'}`}
+                                >
+                                  <span className="capitalize">{s}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(userItem.status)}`}>
+                        {userItem.status || '—'}
+                      </span>
+                    )}
+                  </td>
+                  <td className="table-cell">
+                    {userItem.createdAt ? new Date(userItem.createdAt).toLocaleDateString() : '—'}
                   </td>
                   <td className="table-cell">
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleEdit(userItem)}
-                        className="icon-button-primary"
+                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 shadow-sm"
                         title="Edit user"
+                        aria-label="Edit user"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => confirmDelete(userItem)}
                         disabled={userItem._id === user._id}
-                        className="icon-button-danger disabled:opacity-50 disabled:cursor-not-allowed"
+                        className={`flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 shadow-sm ${userItem._id === user._id ? 'opacity-50 cursor-not-allowed' : ''}`}
                         title={userItem._id === user._id ? "Cannot delete yourself" : "Delete user"}
+                        aria-label={userItem._id === user._id ? "Cannot delete yourself" : "Delete user"}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -295,19 +494,76 @@ const Users = () => {
                 </h3>
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Username</label>
-                    <input
-                      type="text"
-                      value={formData.username}
-                      onChange={(e) => setFormData({...formData, username: e.target.value})}
-                      className="input-field mt-1"
-                      required
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Full Name</label>
+                      <input
+                        type="text"
+                        value={formData.fullName}
+                        onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                        className="input-field mt-1"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Username</label>
+                      <input
+                        type="text"
+                        value={formData.username}
+                        onChange={(e) => setFormData({...formData, username: e.target.value})}
+                        className="input-field mt-1"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Email</label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="input-field mt-1"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Phone</label>
+                      <input
+                        type="text"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        className="input-field mt-1"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Department</label>
+                      <input
+                        type="text"
+                        value={formData.department}
+                        onChange={(e) => setFormData({...formData, department: e.target.value})}
+                        className="input-field mt-1"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Status</label>
+                      <select
+                          value={formData.status}
+                          onChange={(e) => setFormData({...formData, status: e.target.value})}
+                          className="input-field mt-1"
+                        >
+                          <option value="active">Active</option>
+                          <option value="pending">Pending</option>
+                          <option value="suspended">Suspended</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
                   </div>
                   
                   {!editingUser && (
-                    <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Password</label>
                         <input
@@ -329,7 +585,7 @@ const Users = () => {
                           required={!editingUser}
                         />
                       </div>
-                    </>
+                    </div>
                   )}
                   
                   <div>
@@ -363,6 +619,38 @@ const Users = () => {
                     >
                       {editingUser ? 'Update User' : 'Create User'}
                     </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email Compose Modal */}
+      {emailModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Compose Email</h3>
+                <form onSubmit={handleSendEmail} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">To</label>
+                    <div className="mt-1 text-sm text-gray-900">{emailModalUser?.email}</div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Subject</label>
+                    <input value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} className="input-field mt-1" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Message</label>
+                    <textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} className="input-field mt-1 h-28" />
+                  </div>
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button type="button" onClick={closeEmailModal} className="btn-secondary">Cancel</button>
+                    <button type="submit" className="btn-primary">Send</button>
                   </div>
                 </form>
               </div>
