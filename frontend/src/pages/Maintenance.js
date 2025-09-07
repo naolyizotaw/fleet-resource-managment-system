@@ -50,7 +50,8 @@ const Maintenance = () => {
 
       const map = {};
       usersList.forEach(u => {
-        const name = u.username || u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim();
+        // prefer server-side fullName when available
+        const name = u.fullName || u.username || u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim();
         map[u._id] = name || u._id;
       });
 
@@ -68,6 +69,14 @@ const Maintenance = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const getUserDisplay = (u, fallbackId) => {
+    if (!u && !fallbackId) return '-';
+    if (typeof u === 'object') return u.fullName || u.username || u.email || (u._id ? `${String(u._id).slice(0,6)}…` : '-');
+    if (typeof u === 'string') return usersMap[u] || (u.slice ? `${u.slice(0,6)}…` : u);
+    if (fallbackId) return usersMap[fallbackId] || fallbackId;
+    return '-';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -327,16 +336,10 @@ const Maintenance = () => {
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Requested By
+                  Requested
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Requested Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Approved By
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Approved Date
+                  Approval
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Completed Date
@@ -400,7 +403,7 @@ const Maintenance = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {request.driver || request.driverId ? (
-                      <div className="text-sm text-gray-900">{(request.driver?.username || usersMap[request.driverId] || request.driverId || request.driver)}</div>
+                      <div className="text-sm text-gray-900">{getUserDisplay(request.driver, request.driverId)}</div>
                     ) : (
                       <div className="text-sm text-gray-500">-</div>
                     )}
@@ -419,24 +422,12 @@ const Maintenance = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {request.requestedBy ? (
-                      <div className="text-sm text-gray-900">{(request.requestedBy.username || usersMap[request.requestedBy] || request.requestedBy)}</div>
-                    ) : (
-                      <div className="text-sm text-gray-500">-</div>
-                    )}
+                    <div className="text-sm text-gray-900">Requested: {request.requestedDate ? new Date(request.requestedDate).toLocaleDateString() : (request.createdAt ? new Date(request.createdAt).toLocaleDateString() : '-')}</div>
+                    <div className="text-sm text-gray-500">By: {getUserDisplay(request.requestedBy)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {request.requestedDate ? new Date(request.requestedDate).toLocaleDateString() : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {request.approvedBy ? (
-                      <div className="text-sm text-gray-900">{(request.approvedBy.username || usersMap[request.approvedBy] || request.approvedBy)}</div>
-                    ) : (
-                      <div className="text-sm text-gray-500">-</div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {request.approvedDate ? new Date(request.approvedDate).toLocaleDateString() : '-'}
+                    <div className="text-sm text-gray-900">Approved: {request.status === 'approved' && request.approvedDate ? new Date(request.approvedDate).toLocaleDateString() : '—'}</div>
+                    <div className="text-sm text-gray-500">By: {getUserDisplay(request.approvedBy)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {request.completedDate ? new Date(request.completedDate).toLocaleDateString() : '-'}

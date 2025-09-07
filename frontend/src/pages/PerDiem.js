@@ -179,6 +179,12 @@ const PerDiem = () => {
     }
   };
 
+  const getUserDisplay = (userField) => {
+    if (!userField) return '—';
+    if (typeof userField === 'object') return userField.fullName || userField.username || userField.email || userField._id;
+    return String(userField);
+  };
+
   const getVehicleFromRequest = (request) => {
     if (request.vehicleId && typeof request.vehicleId === 'object') return request.vehicleId;
     return vehicles.find(v => v._id === request.vehicleId);
@@ -325,15 +331,11 @@ const PerDiem = () => {
                         const vehicle = getVehicleFromRequest(request) || {};
                         const ad = vehicle.assignedDriver;
                         if (ad) {
-                          const id = typeof ad === 'object' ? ad._id : ad;
-                          if (id === user.id) return 'You';
-                          return typeof ad === 'object' ? (ad.username || ad.email || ad._id) : ad;
+                          return getUserDisplay(ad);
                         }
                         const d = request.driverId;
                         if (!d) return '—';
-                        const id = typeof d === 'object' ? d._id : d;
-                        if (id === user.id) return 'You';
-                        return typeof d === 'object' ? (d.username || d.email || d._id) : d;
+                        return getUserDisplay(d);
                       })()}
                     </div>
                   </td>
@@ -365,7 +367,7 @@ const PerDiem = () => {
                       <div className="text-gray-500">
                         {request.approvedBy ? (
                           <>
-                            By: {typeof request.approvedBy === 'object' ? (request.approvedBy.username || request.approvedBy.email || request.approvedBy._id) : request.approvedBy}
+                            By: {getUserDisplay(request.approvedBy)}
                           </>
                         ) : 'By: —'}
                       </div>

@@ -51,9 +51,15 @@ const createPerDiemRequest = async (req, res) => {
 
         await perDiemRequest.save();
 
+        const populated = await PerDiemRequest.findById(perDiemRequest._id)
+            .populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'fullName username email' } })
+            .populate('approvedBy', 'fullName username email')
+            .populate('driverId', 'fullName username email')
+            .populate('requestedBy', 'fullName username email');
+
         return res.status(201).json({
             message: 'Per diem request form submitted successfully',
-            perDiemRequest
+            perDiemRequest: populated
         });
 
     } catch (err) {
@@ -71,10 +77,10 @@ const createPerDiemRequest = async (req, res) => {
 const getPerDiemRequests = async (req, res) => {
     try{
         const perDiemRequest = await PerDiemRequest.find({})
-            .populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'username email' } })
-            .populate('approvedBy', 'username email')
-            .populate('driverId', 'username email')
-            .populate('requestedBy', 'username email');
+            .populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'fullName username email' } })
+            .populate('approvedBy', 'fullName username email')
+            .populate('driverId', 'fullName username email')
+            .populate('requestedBy', 'fullName username email');
         return res.status(200).json(perDiemRequest);
     } catch (err) {
         console.error("Error fetching per-diem requests:", err);
@@ -93,10 +99,10 @@ const getPerDiemRequestById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid perdiam request ID format' });
          }
         const perDiamRequest = await PerDiemRequest.findById(id)
-            .populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'username email' } })
-            .populate('approvedBy', 'username email')
-            .populate('driverId', 'username email')
-            .populate('requestedBy', 'username email');
+            .populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'fullName username email' } })
+            .populate('approvedBy', 'fullName username email')
+            .populate('driverId', 'fullName username email')
+            .populate('requestedBy', 'fullName username email');
         if (!perDiamRequest) {
             return res.status(404).json({ message: 'Per-diam request not found' });
         }
@@ -155,10 +161,10 @@ const updatePerDiemRequest = async (req, res) => {
         }
 
     const updatedRequest = await perDiemRequest.save();
-    await updatedRequest.populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'username email' } });
-    await updatedRequest.populate('approvedBy', 'username email');
-    await updatedRequest.populate('driverId', 'username email');
-    await updatedRequest.populate('requestedBy', 'username email');
+    await updatedRequest.populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'fullName username email' } });
+    await updatedRequest.populate('approvedBy', 'fullName username email');
+    await updatedRequest.populate('driverId', 'fullName username email');
+    await updatedRequest.populate('requestedBy', 'fullName username email');
 
         return res.status(200).json(updatedRequest);
 
@@ -200,10 +206,10 @@ const getMyPerDiemRequests = async (req, res) => {
         const userId = req.user.id;
 
         const requests = await PerDiemRequest.find({ requestedBy: userId })
-            .populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'username email' } })
-            .populate('approvedBy', 'username email')
-            .populate('driverId', 'username email')
-            .populate('requestedBy', 'username email');
+            .populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'fullName username email' } })
+            .populate('approvedBy', 'fullName username email')
+            .populate('driverId', 'fullName username email')
+            .populate('requestedBy', 'fullName username email');
 
         if (!requests || requests.length === 0) {
             return res.status(404).json({ message: "No per diem requests found for this user" });

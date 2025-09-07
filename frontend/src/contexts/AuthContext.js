@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const response = await api.post('/auth/register', userData);
+  await api.post('/auth/register', userData);
       toast.success('User registered successfully!');
       return { success: true };
     } catch (error) {

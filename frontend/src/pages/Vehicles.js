@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { /* useAuth */ } from '../contexts/AuthContext';
 import { vehiclesAPI, usersAPI } from '../services/api';
 import { Truck, Plus, Trash2, Edit, Search, Filter, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Vehicles = () => {
-  const { user } = useAuth();
+  // removed unused user from useAuth to fix eslint no-unused-vars
   const [vehicles, setVehicles] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,6 +15,8 @@ const Vehicles = () => {
   const [editingVehicle, setEditingVehicle] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState(null);
+  const [formError, setFormError] = useState('');
+  const [vehicleErrors, setVehicleErrors] = useState({});
 
   const initialFormData = {
     plateNumber: '',
@@ -57,15 +59,29 @@ const Vehicles = () => {
       if (editingVehicle) {
         await vehiclesAPI.update(editingVehicle._id, formData);
         toast.success('Vehicle updated successfully');
+        // clear any previous error for this vehicle
+        setVehicleErrors(prev => {
+          const copy = { ...prev };
+          delete copy[editingVehicle._id];
+          return copy;
+        });
       } else {
         await vehiclesAPI.create(formData);
         toast.success('Vehicle created successfully');
       }
+      setFormError('');
       fetchData(); // Refetch data to show changes
       setShowModal(false);
     } catch (error) {
       console.error('Error saving vehicle:', error);
-      toast.error(error.response?.data?.message || 'Failed to save vehicle');
+      const message = error.response?.data?.message || 'Failed to save vehicle';
+      setFormError(message);
+      // if editing an existing vehicle, attach inline error to that vehicle row
+      if (editingVehicle) {
+        setVehicleErrors(prev => ({ ...prev, [editingVehicle._id]: message }));
+      }
+      // also show toast for visibility
+      toast.error(message);
     }
   };
 
@@ -83,6 +99,13 @@ const Vehicles = () => {
       status: vehicle.status || 'active',
     });
     setShowModal(true);
+    // clear any previous errors for this vehicle in the modal
+    setFormError('');
+    setVehicleErrors(prev => {
+      const copy = { ...prev };
+      delete copy[vehicle._id];
+      return copy;
+    });
   };
 
   const handleDelete = async () => {
@@ -90,12 +113,16 @@ const Vehicles = () => {
     try {
       await vehiclesAPI.delete(vehicleToDelete._id);
       toast.success('Vehicle deleted successfully');
-      fetchData(); // Refetch data
+  fetchData(); // Refetch data
+  setFormError('');
       setShowDeleteModal(false);
       setVehicleToDelete(null);
     } catch (error) {
       console.error('Error deleting vehicle:', error);
-      toast.error('Failed to delete vehicle');
+  const message = error.response?.data?.message || 'Failed to delete vehicle';
+  // attach to the row for visibility
+  setVehicleErrors(prev => ({ ...prev, [vehicleToDelete._id]: message }));
+  toast.error(message);
     }
   };
 
@@ -107,7 +134,8 @@ const Vehicles = () => {
   const openAddModal = () => {
     setEditingVehicle(null);
     setFormData(initialFormData);
-    setShowModal(true);
+  setFormError('');
+  setShowModal(true);
   };
 
   const getStatusBadgeColor = (status) => {
@@ -220,7 +248,7 @@ const Vehicles = () => {
                       <div className="flex items-center">
                         <User className="h-4 w-4 text-gray-400 mr-2" />
                         <span className="text-sm text-gray-900">
-                          {vehicle.assignedDriver.username || 'Unknown'}
+                          {vehicle.assignedDriver.fullName || vehicle.assignedDriver.username || 'Unknown'}
                         </span>
                       </div>
                     ) : (
@@ -253,6 +281,9 @@ const Vehicles = () => {
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
+                    {vehicleErrors[vehicle._id] && (
+                      <div className="mt-2 text-sm text-red-600">{vehicleErrors[vehicle._id]}</div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -285,6 +316,11 @@ const Vehicles = () => {
               </div>
               <form onSubmit={handleSubmit}>
                 <div className="p-6 space-y-4">
+                  {formError && (
+                    <div className="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded-md">
+                      {formError}
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="form-label">Manufacturer</label>
@@ -335,7 +371,7 @@ const Vehicles = () => {
                     <select value={formData.assignedDriver} onChange={(e) => setFormData({...formData, assignedDriver: e.target.value})} className="input-field">
                       <option value="">Select Driver</option>
                       {users.map(user => (
-                        <option key={user._id} value={user._id}>{user.username}</option>
+                        <option key={user._id} value={user._id}>{user.fullName || user.username}</option>
                       ))}
                     </select>
                   </div>

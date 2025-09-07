@@ -219,6 +219,15 @@ const FuelPage = () => {
     return null;
   }, [vehiclesById]);
 
+  // Prefer fullName then username then email then short id for display
+  const getUserDisplay = (u) => {
+    if (!u) return '-';
+    if (typeof u === 'object') {
+      return u.fullName || u.username || u.email || (u._id ? `${String(u._id).slice(0,6)}…` : '-');
+    }
+    return typeof u === 'string' ? (u.slice ? `${u.slice(0,6)}…` : String(u)) : '-';
+  };
+
   const filteredRequests = requests.filter(request => {
     const vehicleObj = resolveVehicle(request);
     const manufacturer = vehicleObj?.manufacturer || '';
@@ -293,14 +302,13 @@ const FuelPage = () => {
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
-              <tr>
+                <tr>
                 <th className="table-header">Request</th>
                 <th className="table-header">Vehicle</th>
                 <th className="table-header">Fuel Details</th>
                 <th className="table-header">KM & Purpose</th>
                 <th className="table-header">Requester</th>
-                <th className="table-header">Approver</th>
-                <th className="table-header">Approved Date</th>
+                <th className="table-header">Approval</th>
                 <th className="table-header">Status</th>
                 <th className="table-header">Actions</th>
               </tr>
@@ -353,13 +361,12 @@ const FuelPage = () => {
                     <div className="text-xs text-gray-500 truncate max-w-[200px]" title={request.purpose}>{request.purpose}</div>
                   </td>
                   <td className="table-cell">
-                    <div className="text-sm text-gray-900">{typeof request.requestedBy === 'object' ? request.requestedBy?.username : ''}</div>
+                    <div className="text-sm text-gray-900">{getUserDisplay(request.requestedBy)}</div>
                   </td>
                   <td className="table-cell">
-                    <div className="text-sm text-gray-900">{typeof request.approvedBy === 'object' ? request.approvedBy?.username : '-'}</div>
-                  </td>
-                  <td className="table-cell">
-                    <div className="text-sm text-gray-900">{request.issuedDate ? new Date(request.issuedDate).toLocaleDateString() : '-'}</div>
+                    <div className="text-sm text-gray-900">Approved: {request.status === 'approved' && request.issuedDate ? new Date(request.issuedDate).toLocaleDateString() : '—'}</div>
+                    <div className="text-sm text-gray-500">By: {getUserDisplay(request.approvedBy)}</div>
+                    
                   </td>
                   <td className="table-cell">
                     <span className={`status-badge ${getStatusBadgeColor(request.status)}`}>

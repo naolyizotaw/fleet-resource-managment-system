@@ -15,8 +15,19 @@ const createVehicle = async (req, res) => {
                 return res.status(409).json({ message: `Vehicle with plateNumber: ${data.plateNumber} already exists` });
             }
         } 
-        const vehicle = await Vehicle.create(data);
-        const populated = await vehicle.populate({ path: 'assignedDriver', select: 'username role' });
+        // Business rule: a driver can be assigned to only one vehicle
+        if (data?.assignedDriver) {
+            const taken = await Vehicle.findOne({ assignedDriver: data.assignedDriver });
+            if (taken) {
+                // Prefer plateNumber for a readable error; fall back to id to match other messages
+                if (taken.plateNumber) {
+                    return res.status(409).json({ message: `Driver is already assigned to vehicle with plateNumber: ${taken.plateNumber}` });
+                }
+                return res.status(409).json({ message: `Driver is already assigned to vehicle with id: ${taken._id}` });
+            }
+        }
+    const vehicle = await Vehicle.create(data);
+    const populated = await vehicle.populate({ path: 'assignedDriver', select: 'fullName username role' });
         console.log(populated);
         return res.status(201).json(populated);
          
@@ -40,7 +51,7 @@ const createVehicle = async (req, res) => {
 //@access admin/manager
 const getVehicles = async (req, res) => {
     try {
-        const vehicles = await Vehicle.find({}).populate({ path: 'assignedDriver', select: 'username role' });
+    const vehicles = await Vehicle.find({}).populate({ path: 'assignedDriver', select: 'fullName username role' });
         return res.status(200).json(vehicles);
     } catch (err) {
         return res.status(500).json({ message: err.message });
@@ -58,7 +69,7 @@ const getVehicleById = async (req, res) => {
         if (!mongoose.isValidObjectId(id)) {
             return res.status(400).json({ message: 'Invalid vehicle id' });
         }
-        const vehicle = await Vehicle.findById(id).populate({ path: 'assignedDriver', select: 'username role' });
+    const vehicle = await Vehicle.findById(id).populate({ path: 'assignedDriver', select: 'fullName username role' });
         if (!vehicle) {
             return res.status(404).json({ message: 'Vehicle not found' });
         }
@@ -77,8 +88,19 @@ const updateVehicle = async (req, res) => {
         if (!mongoose.isValidObjectId(id)) {
             return res.status(400).json({ message: 'Invalid vehicle id' });
         }
+        // If attempting to assign a driver, ensure that driver is not already assigned
+        if (req.body && req.body.hasOwnProperty('assignedDriver') && req.body.assignedDriver) {
+            const existing = await Vehicle.findOne({ assignedDriver: req.body.assignedDriver });
+            if (existing && existing._id.toString() !== id) {
+                if (existing.plateNumber) {
+                    return res.status(409).json({ message: `Driver is already assigned to vehicle with plateNumber: ${existing.plateNumber}` });
+                }
+                return res.status(409).json({ message: `Driver is already assigned to vehicle with id: ${existing._id}` });
+            }
+        }
+
         const updatedVehicle = await Vehicle.findByIdAndUpdate(id, req.body, { new: true, runValidators: true })
-            .populate({ path: 'assignedDriver', select: 'username role' });
+            .populate({ path: 'assignedDriver', select: 'fullName username role' });
         if (!updatedVehicle) {
             return res.status(404).json({ message: 'Vehicle not found' });
         }

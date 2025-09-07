@@ -44,13 +44,18 @@ const createFuelRequest = async (req, res) => {
 
         await fuelRequest.save();
 
-        
         vehicle.currentKm = currentKm;
         await vehicle.save();
 
+        const populated = await FuelRequest.findById(fuelRequest._id)
+            .populate('vehicleId', 'plateNumber manufacturer model year')
+            .populate('driverId', 'fullName username')
+            .populate('requestedBy', 'fullName username')
+            .populate('approvedBy', 'fullName username');
+
         return res.status(201).json({
             message: 'Fuel request form submitted successfully',
-            fuelRequest
+            fuelRequest: populated
         });
 
     } catch (err) {
@@ -69,9 +74,9 @@ const getFuelRequests = async (req, res) => {
     try{
         const fuelRequests = await FuelRequest.find({})
             .populate('vehicleId', 'plateNumber manufacturer model year')
-            .populate('driverId', 'username')
-            .populate('requestedBy', 'username')
-            .populate('approvedBy', 'username');
+            .populate('driverId', 'fullName username')
+            .populate('requestedBy', 'fullName username')
+            .populate('approvedBy', 'fullName username');
         return res.status(200).json(fuelRequests);
     } catch (err) {
         console.error("Error fetching fuel requests:", err);
@@ -90,9 +95,9 @@ const getFuelRequestById = async (req, res) => {
         }
         const fuelRequest = await FuelRequest.findById(id)
             .populate('vehicleId', 'plateNumber manufacturer model year')
-            .populate('driverId', 'username')
-            .populate('requestedBy', 'username')
-            .populate('approvedBy', 'username');
+            .populate('driverId', 'fullName username')
+            .populate('requestedBy', 'fullName username')
+            .populate('approvedBy', 'fullName username');
         if (!fuelRequest) {
             return res.status(404).json({ message: 'Fuel request not found' });
         }
@@ -149,9 +154,9 @@ const updateFuelRequest = async (req, res) => {
 
             const populated = await FuelRequest.findById(id)
                 .populate('vehicleId', 'plateNumber manufacturer model year')
-                .populate('driverId', 'username')
-                .populate('requestedBy', 'username')
-                .populate('approvedBy', 'username');
+                .populate('driverId', 'fullName username')
+                .populate('requestedBy', 'fullName username')
+                .populate('approvedBy', 'fullName username');
 
             return res.status(200).json({ message: `Fuel request has been ${status}.`, fuelRequest: populated });
         }
@@ -198,9 +203,9 @@ const updateFuelRequest = async (req, res) => {
 
         const populated = await FuelRequest.findById(id)
             .populate('vehicleId', 'plateNumber manufacturer model year')
-            .populate('driverId', 'username')
-            .populate('requestedBy', 'username')
-            .populate('approvedBy', 'username');
+            .populate('driverId', 'fullName username')
+            .populate('requestedBy', 'fullName username')
+            .populate('approvedBy', 'fullName username');
 
     return res.status(200).json({ message: 'Fuel request updated successfully', fuelRequest: populated });
     } catch (err) {
