@@ -46,7 +46,8 @@ export const AuthProvider = ({ children }) => {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(userData);
       
-      toast.success(`Welcome back, ${userData.username}!`);
+  const displayName = userData.fullName || userData.username;
+  toast.success(`Welcome back, ${displayName}!`);
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';

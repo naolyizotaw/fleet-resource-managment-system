@@ -47,6 +47,7 @@ export const usersAPI = {
   getAll: () => api.get('/api/users'),
   getDrivers: () => api.get('/api/users/drivers'),
   update: (id, userData) => api.put(`/api/users/${id}`, userData),
+  resetPassword: (id, body) => api.put(`/api/users/${id}/password`, body),
   delete: (id) => api.delete(`/api/users/${id}`),
   getMe: () => api.get('/api/users/me'),
 };

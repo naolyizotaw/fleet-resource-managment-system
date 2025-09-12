@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { usersAPI, authAPI } from '../services/api';
-import { Users as UsersIcon, Plus, Trash2, Edit, Search, Filter, ChevronDown, Copy, Check, Mail, User } from 'lucide-react';
+import { Users as UsersIcon, Plus, Trash2, Edit, Search, Filter, ChevronDown, Copy, Check, Mail, Unlock, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Users = () => {
@@ -169,6 +169,10 @@ const Users = () => {
   const [emailModalUser, setEmailModalUser] = useState(null);
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetUser, setResetUser] = useState(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [resetMessages, setResetMessages] = useState({});
   // allowed statuses are defined inline where needed
 
   const toggleStatusMenu = (id) => {
@@ -450,6 +454,16 @@ const Users = () => {
                       >
                         <Edit className="h-4 w-4" />
                       </button>
+                      {user.role === 'admin' && userItem._id !== user._id && (
+                        <button
+                          onClick={() => { setResetUser(userItem); setResetModalOpen(true); setResetPasswordValue(''); }}
+                          className="flex items-center justify-center w-8 h-8 rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 shadow-sm"
+                          title="Reset password"
+                          aria-label="Reset password"
+                        >
+                          <Unlock className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => confirmDelete(userItem)}
                         disabled={userItem._id === user._id}
@@ -460,6 +474,13 @@ const Users = () => {
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
+                    {resetMessages[userItem._id] && (
+                      <div className="mt-2">
+                        <div className={`rounded-md p-2 text-sm ${resetMessages[userItem._id].type === 'success' ? 'bg-green-50 border-l-4 border-green-500 text-green-800' : 'bg-red-50 border-l-4 border-red-500 text-red-800'}`}>
+                          {resetMessages[userItem._id].text}
+                        </div>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -651,6 +672,53 @@ const Users = () => {
                   <div className="flex justify-end space-x-3 pt-4">
                     <button type="button" onClick={closeEmailModal} className="btn-secondary">Cancel</button>
                     <button type="submit" className="btn-primary">Send</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal (admin) */}
+      {resetModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Reset Password for {resetUser?.username}</h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!resetPasswordValue || resetPasswordValue.length < 6) {
+                    // keep existing inline validation behavior
+                    toast.error('Password must be at least 6 characters');
+                    return;
+                  }
+                  try {
+                    await usersAPI.resetPassword(resetUser._id, { newPassword: resetPasswordValue });
+                    // set a per-user inline message instead of a toast
+                    setResetMessages(prev => ({ ...prev, [resetUser._id]: { type: 'success', text: 'Password reset successfully' } }));
+                    // auto-clear after 8 seconds
+                    setTimeout(() => setResetMessages(prev => { const copy = { ...prev }; delete copy[resetUser._id]; return copy; }), 8000);
+                    setResetModalOpen(false);
+                    setResetUser(null);
+                    setResetPasswordValue('');
+                  } catch (err) {
+                    console.error('Reset failed', err);
+                    const msg = err.response?.data?.message || 'Failed to reset password';
+                    setResetMessages(prev => ({ ...prev, [resetUser._id]: { type: 'error', text: msg } }));
+                    // auto-clear after 8 seconds
+                    setTimeout(() => setResetMessages(prev => { const copy = { ...prev }; delete copy[resetUser._id]; return copy; }), 8000);
+                  }
+                }}>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">New password</label>
+                    <input type="password" value={resetPasswordValue} onChange={(e) => setResetPasswordValue(e.target.value)} className="input-field mt-1" />
+                  </div>
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button type="button" onClick={() => { setResetModalOpen(false); setResetUser(null); setResetPasswordValue(''); }} className="btn-secondary">Cancel</button>
+                    <button type="submit" className="btn-primary">Reset Password</button>
                   </div>
                 </form>
               </div>

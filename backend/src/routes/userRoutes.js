@@ -2,7 +2,7 @@ const express = require("express");
 const { verifyToken } = require('../middlewares/authMiddleware');
 const authorizeRoles = require("../middlewares/roleMiddleware");
 const User = require('../models/userModel');
-const { updateUser } = require('../controllers/authController');
+const { updateUser, updateMe, changePassword } = require('../controllers/authController');
 
 
 const router = express.Router();
@@ -38,6 +38,19 @@ router.delete('/:id', verifyToken, authorizeRoles('admin'), async (req, res) => 
     }
 });
 
+// current user update profile (must come before `/:id` so 'me' isn't treated as an id)
+router.put('/me', verifyToken, updateMe);
+
+// change password for current user
+router.put('/me/password', verifyToken, changePassword);
+
+// Admin: reset a user's password (admin only)
+router.put('/:id/password', verifyToken, authorizeRoles('admin'), async (req, res, next) => {
+    // delegate to controller
+    const { adminResetPassword } = require('../controllers/authController');
+    return adminResetPassword(req, res, next);
+});
+
 // Admin: update user by id (allow updating common profile fields)
 router.put('/:id', verifyToken, authorizeRoles('admin'), updateUser);
 
@@ -56,10 +69,32 @@ router.get("/user", verifyToken, authorizeRoles("admin", "manager", "user"), (re
     res.json({message: "Welcome User!"})
 });
 
-// current user info
-router.get('/me', verifyToken, (req, res) => {
-    // req.user comes from verifyToken (decoded token)
-    res.json({ id: req.user.id, role: req.user.role, username: req.user.username });
+// current user info - fetch from DB to ensure we return up-to-date profile fields
+router.get('/me', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user && req.user.id;
+        if (!userId) return res.status(400).json({ message: 'Invalid token payload' });
+
+        const user = await User.findById(userId, '-password');
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // return selected public profile fields
+        res.json({
+            id: user._id,
+            username: user.username,
+            fullName: user.fullName || null,
+            role: user.role,
+            email: user.email || null,
+            phone: user.phone || null,
+            department: user.department || null,
+            status: user.status || null
+        });
+    } catch (err) {
+        console.error('GET /users/me error:', err);
+        res.status(500).json({ message: 'Failed to fetch user profile' });
+    }
 });
+
+// ...existing code...
 
 module.exports = router;
