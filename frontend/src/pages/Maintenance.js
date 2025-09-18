@@ -38,12 +38,23 @@ const Maintenance = () => {
         maintenanceRes = await maintenanceAPI.getMyRequests();
       }
       
-      const vehiclesRes = await vehiclesAPI.getAll();
+      // For drivers/users fetch only vehicles assigned to them; admins/managers get all
+      const vehiclesRes = (user.role === 'admin' || user.role === 'manager')
+        ? await vehiclesAPI.getAll()
+        : await vehiclesAPI.getMine();
       // fetch users to resolve requestedBy/approvedBy ids -> names
+      // Admins get all users; managers get drivers list; other roles get none
       let usersList = [];
       try {
-        const usersRes = await usersAPI.getAll();
-        usersList = usersRes.data || [];
+        if (user.role === 'admin') {
+          const usersRes = await usersAPI.getAll();
+          usersList = usersRes.data || [];
+        } else if (user.role === 'manager') {
+          const usersRes = await usersAPI.getDrivers();
+          usersList = usersRes.data || [];
+        } else {
+          usersList = [];
+        }
       } catch (e) {
         usersList = [];
       }
@@ -52,7 +63,7 @@ const Maintenance = () => {
       usersList.forEach(u => {
         // prefer server-side fullName when available
         const name = u.fullName || u.username || u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim();
-        map[u._id] = name || u._id;
+        map[String(u._id)] = name || String(u._id);
       });
 
       setRequests(maintenanceRes.data || []);
@@ -71,11 +82,24 @@ const Maintenance = () => {
   }, [fetchData]);
 
   const getUserDisplay = (u, fallbackId) => {
-    if (!u && !fallbackId) return '-';
-    if (typeof u === 'object') return u.fullName || u.username || u.email || (u._id ? `${String(u._id).slice(0,6)}…` : '-');
-    if (typeof u === 'string') return usersMap[u] || (u.slice ? `${u.slice(0,6)}…` : u);
-    if (fallbackId) return usersMap[fallbackId] || fallbackId;
+    // Prefer populated object if available (driver or driverId could be populated)
+    const populated = (u && typeof u === 'object') ? u : (fallbackId && typeof fallbackId === 'object' ? fallbackId : null);
+    if (populated) {
+      return populated.fullName || populated.username || populated.name || populated.email || (populated._id ? `${String(populated._id).slice(0,6)}…` : '-');
+    }
+    // If it's a string id, try the usersMap lookup
+    const idKey = typeof u === 'string' ? u : (typeof fallbackId === 'string' ? fallbackId : null);
+    if (idKey) return usersMap[idKey] || (idKey.slice ? `${idKey.slice(0,6)}…` : idKey);
     return '-';
+  };
+
+  // Resolve a vehicle object from a request supporting both populated and id-only shapes
+  const resolveVehicle = (req) => {
+    const vField = req.vehicleId ?? req.vehicle; // support either field
+    if (!vField) return null;
+    if (typeof vField === 'object') return vField; // already populated
+    // otherwise it's an id string - find in vehicles list
+    return vehicles.find(v => v._id === vField) || null;
   };
 
   const handleSubmit = async (e) => {
@@ -241,8 +265,8 @@ const Maintenance = () => {
   };
 
   const filteredRequests = requests.filter(request => {
-    const vehicle = vehicles.find(v => v._id === request.vehicleId);
-    const vehicleLabel = `${vehicle?.manufacturer || vehicle?.make || ''} ${vehicle?.model || ''} ${vehicle?.plateNumber || ''}`.toLowerCase();
+  const vehicle = resolveVehicle(request);
+  const vehicleLabel = `${vehicle?.manufacturer || vehicle?.make || ''} ${vehicle?.model || ''} ${vehicle?.plateNumber || ''}`.toLowerCase();
     const matchesSearch = 
       request.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vehicleLabel.includes(searchTerm.toLowerCase());
@@ -376,22 +400,23 @@ const Maintenance = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {vehicles.find(v => v._id === request.vehicleId) ? (
-                      <div className="flex items-center">
-                        <Truck size={16} className="text-gray-400 mr-2 inline-block" />
-                        <span className="text-sm text-gray-900">
-                          {vehicles.find(v => v._id === request.vehicleId)?.year} {' '}
-                          {vehicles.find(v => v._id === request.vehicleId)?.manufacturer || ''} {' '}
-                          {vehicles.find(v => v._id === request.vehicleId)?.model}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-500">Unknown Vehicle</span>
-                    )}
+                    {(() => {
+                      const vehicle = resolveVehicle(request);
+                      return vehicle ? (
+                        <div className="flex items-center">
+                          <Truck size={16} className="text-gray-400 mr-2 inline-block" />
+                          <span className="text-sm text-gray-900">
+                            {vehicle.year} {vehicle.manufacturer || vehicle.make || ''} {vehicle.model}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-500">Unknown Vehicle</span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {(() => {
-                      const vehicle = vehicles.find(v => v._id === request.vehicleId);
+                      const vehicle = resolveVehicle(request);
                       if (vehicle && vehicle.plateNumber) {
                         return <div className="text-sm text-gray-900">{vehicle.plateNumber}</div>;
                       }

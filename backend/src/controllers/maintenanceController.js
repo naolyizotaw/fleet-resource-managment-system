@@ -73,8 +73,12 @@ const createMaintenance = async (req, res) => {
 //@access admin/manager
 const getMaintenances = async (req, res) => {
     try {
-        const request = await MaintenanceRequest.find({});
-        return res.status(200).json(request);
+    const request = await MaintenanceRequest.find({})
+      .populate('vehicleId', 'plateNumber model')
+      .populate('driverId', 'fullName username')
+      .populate('requestedBy', 'fullName username')
+      .populate('approvedBy', 'fullName username');
+    return res.status(200).json(request);
     } catch (err) {
         return res.status(500).json({ message: err.message });
     }
@@ -90,7 +94,11 @@ const getMaintenanceById = async (req, res) => {
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid Request id' });
     }
-    const request = await MaintenanceRequest.findById(id);
+    const request = await MaintenanceRequest.findById(id)
+      .populate('vehicleId', 'plateNumber model')
+      .populate('driverId', 'fullName username')
+      .populate('requestedBy', 'fullName username')
+      .populate('approvedBy', 'fullName username');
     if (!request) {
       return res.status(404).json({ message: "Maintenance request not found" });
     }
@@ -193,14 +201,28 @@ const getMyMaintenanceRequests = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const requests = await MaintenanceRequest.find({ requestedBy: userId })
-            .populate('vehicleId', 'plateNumber model');
+    // Find vehicles assigned to this user (if any)
+    const assignedVehicles = await Vehicle.find({ assignedDriver: userId }).select('_id');
+    const vehicleIds = assignedVehicles.map(v => v._id);
 
-        if (!requests || requests.length === 0) {
-            return res.status(404).json({ message: "No maintenance requests found for this user" });
-        }
+    // Find maintenance requests either requested by the user OR for vehicles assigned to them
+    const query = {
+      $or: [
+        { requestedBy: userId },
+      ],
+    };
+    if (vehicleIds.length > 0) {
+      query.$or.push({ vehicleId: { $in: vehicleIds } });
+    }
 
-        res.status(200).json(requests);
+    const requests = await MaintenanceRequest.find(query)
+      .populate('vehicleId', 'plateNumber model')
+      .populate('driverId', 'fullName username')
+      .populate('requestedBy', 'fullName username')
+      .populate('approvedBy', 'fullName username');
+
+    // Return 200 with an array (empty if none) to simplify client handling
+    return res.status(200).json(requests);
     } catch (error) {
         console.error("Error fetching user maintenance requests:", error);
         res.status(500).json({ message: "Internal server error" });
@@ -211,7 +233,7 @@ const getMyMaintenanceRequests = async (req, res) => {
 module.exports = {
   createMaintenance,
   getMaintenances,
-  getMaintenanceById,
+  getMaintenanceById, 
   updateMaintenance,  
   deleteMaintenance,
   getMyMaintenanceRequests
