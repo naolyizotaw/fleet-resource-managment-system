@@ -13,6 +13,8 @@ const PerDiem = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [editingRequest, setEditingRequest] = useState(null);
+  const [conflictInfo, setConflictInfo] = useState(null);
+  const [formError, setFormError] = useState(null);
 
   const [formData, setFormData] = useState({
   vehicleId: '',
@@ -65,6 +67,8 @@ const PerDiem = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError(null); // Reset error on new submission
+    setConflictInfo(null);
     
     try {
       if (editingRequest) {
@@ -83,7 +87,19 @@ const PerDiem = () => {
       resetForm();
     } catch (error) {
       console.error('Error saving per diem request:', error);
-      toast.error('Failed to save per diem request');
+      const errorMessage = error.response?.data?.message || 'Failed to save per diem request';
+      
+      if (error.response?.status === 409) {
+        const { requestId, status } = error.response.data;
+        setConflictInfo({
+          message: errorMessage,
+          requestId,
+          status,
+        });
+      } else {
+        setFormError(errorMessage);
+      }
+      toast.error(errorMessage);
     }
   };
 
@@ -188,6 +204,17 @@ const PerDiem = () => {
   const getVehicleFromRequest = (request) => {
     if (request.vehicleId && typeof request.vehicleId === 'object') return request.vehicleId;
     return vehicles.find(v => v._id === request.vehicleId);
+  };
+
+  const viewExistingRequest = async (requestId) => {
+    try {
+      const response = await perDiemAPI.getById(requestId);
+      handleEdit(response.data);
+      setConflictInfo(null);
+    } catch (error) {
+      console.error('Error fetching existing request:', error);
+      toast.error('Failed to load existing request.');
+    }
   };
 
   const filteredRequests = requests.filter(request => {
@@ -459,6 +486,32 @@ const PerDiem = () => {
                 <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
                   {editingRequest ? 'Edit Per Diem Request' : 'New Per Diem Request'}
                 </h3>
+
+                {formError && (
+                  <div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200">
+                    <p className="text-sm text-red-800">{formError}</p>
+                  </div>
+                )}
+
+                {conflictInfo && (
+                  <div className="mb-4 p-3 rounded-md border border-red-200 bg-red-50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-red-800">{conflictInfo.message}</p>
+                        <p className="text-xs text-red-700">Status: {conflictInfo.status}</p>
+                      </div>
+                      {conflictInfo.requestId && (
+                        <button
+                          onClick={() => viewExistingRequest(conflictInfo.requestId)}
+                          className="ml-4 btn-secondary text-sm"
+                          type="button"
+                        >
+                          View Existing
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>

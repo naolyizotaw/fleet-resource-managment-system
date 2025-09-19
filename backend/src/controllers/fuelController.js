@@ -243,11 +243,21 @@ const getMyFuelRequests = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const requests = await FuelRequest.find({ requestedBy: userId })
+        // Find vehicles assigned to the current user
+        const userVehicles = await Vehicle.find({ assignedDriver: userId });
+        const vehicleIds = userVehicles.map(vehicle => vehicle._id);
+
+        // Find fuel requests for the user's assigned vehicles or requested by the user
+        const requests = await FuelRequest.find({
+            $or: [
+                { vehicleId: { $in: vehicleIds } },
+                { requestedBy: userId }
+            ]
+        })
             .populate('vehicleId', 'plateNumber manufacturer model year')
-            .populate('driverId', 'username')
-            .populate('requestedBy', 'username')
-            .populate('approvedBy', 'username');
+            .populate('driverId', 'fullName username')
+            .populate('requestedBy', 'fullName username')
+            .populate('approvedBy', 'fullName username');
 
         if (!requests || requests.length === 0) {
             return res.status(404).json({ message: "No fuel requests found for this user" });

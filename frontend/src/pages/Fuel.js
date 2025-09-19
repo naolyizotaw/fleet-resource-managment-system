@@ -47,11 +47,18 @@ const FuelPage = () => {
         }
       }
 
-      // Fetch vehicles only for admin/manager (drivers cannot access vehicle list)
+      // Fetch vehicles: admins/managers get all; regular users get only their assigned vehicles
       let vehiclesData = [];
-      if (isPrivileged) {
-        const vehiclesRes = await vehiclesAPI.getAll();
-        vehiclesData = vehiclesRes.data || [];
+      try {
+        if (isPrivileged) {
+          const vehiclesRes = await vehiclesAPI.getAll();
+          vehiclesData = vehiclesRes.data || [];
+        } else {
+          const mineRes = await vehiclesAPI.getMine();
+          vehiclesData = mineRes.data || [];
+        }
+      } catch (err) {
+        vehiclesData = [];
       }
 
       const requestsData = fuelRes ? (fuelRes.data || []) : [];
@@ -71,7 +78,7 @@ const FuelPage = () => {
         }
       }
 
-      setVehicles(isPrivileged ? vehiclesData : []);
+      setVehicles(vehiclesData);
       setRequests(requestsData);
     } catch (error) {
       console.error('Error fetching data:', error);

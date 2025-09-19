@@ -35,7 +35,11 @@ const createPerDiemRequest = async (req, res) => {
             status: 'pending'
         });
         if (existingRequest) {
-            return res.status(409).json({ message: 'There is already a pending per diem request for this user.' });
+            return res.status(409).json({ 
+                message: 'There is already a pending per diem request for this user.',
+                requestId: existingRequest._id,
+                status: existingRequest.status
+            });
         }
 
         const perDiemRequest = new PerDiemRequest({
@@ -205,7 +209,17 @@ const getMyPerDiemRequests = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const requests = await PerDiemRequest.find({ requestedBy: userId })
+        // Find vehicles assigned to the current user
+        const userVehicles = await Vehicle.find({ assignedDriver: userId });
+        const vehicleIds = userVehicles.map(vehicle => vehicle._id);
+
+        // Find per diem requests for the user's assigned vehicles or requested by the user
+        const requests = await PerDiemRequest.find({
+            $or: [
+                { vehicleId: { $in: vehicleIds } },
+                { requestedBy: userId }
+            ]
+        })
             .populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'fullName username email' } })
             .populate('approvedBy', 'fullName username email')
             .populate('driverId', 'fullName username email')
