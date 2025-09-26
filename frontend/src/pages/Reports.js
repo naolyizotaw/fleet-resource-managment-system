@@ -77,7 +77,7 @@ const Reports = () => {
     filteredData.forEach(item => {
       if (item.vehicleId && item.estimatedCost) {
         const vehicle = reports.vehicles.find(v => v._id === item.vehicleId);
-        const vehicleName = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'Unknown';
+  const vehicleName = vehicle ? `${vehicle.year} ${vehicle.manufacturer || vehicle.make} ${vehicle.model}` : 'Unknown';
         vehicleCosts[vehicleName] = (vehicleCosts[vehicleName] || 0) + parseFloat(item.estimatedCost);
       }
     });
@@ -92,7 +92,7 @@ const Reports = () => {
     filteredData.forEach(item => {
       if (item.vehicleId && item.quantity) {
         const vehicle = reports.vehicles.find(v => v._id === item.vehicleId);
-        const vehicleName = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : 'Unknown';
+  const vehicleName = vehicle ? `${vehicle.year} ${vehicle.manufacturer || vehicle.make} ${vehicle.model}` : 'Unknown';
         vehicleFuel[vehicleName] = (vehicleFuel[vehicleName] || 0) + parseFloat(item.quantity);
       }
     });

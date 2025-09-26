@@ -29,6 +29,10 @@ const driverLogSchema = new mongoose.Schema ({
     remarks: {
         type: String,
     },
+    isEditable: {
+        type: Boolean,
+        default: true,
+    }
 }, {timestamps: true}); 
 
 driverLogSchema.pre("save", function(next) { 

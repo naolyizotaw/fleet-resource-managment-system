@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
     createLog,
+    updateLog,
     getLogs,
     getLogById,
     getLogByVehicle,
@@ -19,6 +20,7 @@ const router = express.Router();
 // All log routes require a valid token
 router.use(verifyToken);
 
+router.put("/:id", authorizeRoles("driver", "manager", "admin"), updateLog);
 router.post("/", authorizeRoles("driver", "manager", "admin"), createLog);
 router.get("/my", authorizeRoles("driver", "user"), getMyLogs);
 router.get("/", authorizeRoles("manager", "admin"), getLogs);

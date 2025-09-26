@@ -99,6 +99,7 @@ export const logsAPI = {
   getMyLogs: () => api.get('/api/logs/my'),
   getByVehicle: (vehicleId) => api.get(`/api/logs/vehicle/${vehicleId}`),
   create: (logData) => api.post('/api/logs', logData),
+  update: (id, logData) => api.put(`/api/logs/${id}`, logData),
   delete: (id) => api.delete(`/api/logs/${id}`),
 };
 

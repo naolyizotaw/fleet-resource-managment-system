@@ -1,160 +1,162 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { logsAPI, vehiclesAPI } from '../services/api';
-import { FileText, Plus, Search, Filter, Truck, Calendar, MapPin, Clock } from 'lucide-react';
+import { logsAPI, vehiclesAPI, usersAPI } from '../services/api';
+import { Truck, Edit, Trash2, Search, Plus, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Logs = () => {
   const { user } = useAuth();
   const [logs, setLogs] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+  const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [vehicleFilter, setVehicleFilter] = useState('all');
-  const [showModal, setShowModal] = useState(false);
-  const [editingLog, setEditingLog] = useState(null);
 
-  const [formData, setFormData] = useState({
-    vehicleId: '',
-    date: new Date().toISOString().split('T')[0],
-    startLocation: '',
-    endLocation: '',
-    startOdometer: '',
-    endOdometer: '',
-    notes: '',
-  });
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      let logsRes;
-      
-      if (user.role === 'admin' || user.role === 'manager') {
-        logsRes = await logsAPI.getAll();
-      } else {
-        logsRes = await logsAPI.getMyLogs();
-      }
-      
-      const vehiclesRes = await vehiclesAPI.getAll();
-      
-      setLogs(logsRes.data);
-      setVehicles(vehiclesRes.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Failed to fetch data');
+      const logsPromise = user?.role === 'admin' ? logsAPI.getAll() : logsAPI.getMyLogs();
+      const [logsRes, vehiclesRes, driversRes] = await Promise.all([
+        logsPromise,
+        vehiclesAPI.getAll(),
+        usersAPI.getDrivers(),
+      ]);
+
+      const fetchedLogs = logsRes?.data || logsRes || [];
+      const fetchedVehicles = vehiclesRes?.data || vehiclesRes || [];
+      const fetchedDrivers = driversRes?.data || driversRes || [];
+
+      setLogs(Array.isArray(fetchedLogs) ? fetchedLogs : []);
+      setVehicles(Array.isArray(fetchedVehicles) ? fetchedVehicles : []);
+      setDrivers(Array.isArray(fetchedDrivers) ? fetchedDrivers : []);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load logs');
     } finally {
       setLoading(false);
     }
+  }, [user]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const vehiclesMap = useMemo(() => {
+    const m = {};
+    vehicles.forEach(v => { if (v && v._id) m[String(v._id)] = v; });
+    return m;
+  }, [vehicles]);
+
+  const resolveVehicle = useCallback((log) => {
+    if (!log) return null;
+    const v = log.vehicle || log.vehicleId || log.vehicle_id;
+    if (!v) return null;
+    if (typeof v === 'object') return v;
+    return vehiclesMap[String(v)] || null;
+  }, [vehiclesMap]);
+
+  const formatVehicleLabel = (v) => (v ? [v.year, v.manufacturer, v.model].filter(Boolean).join(' ') : 'Unknown');
+
+  const calculateDistance = (s, e) => {
+    const a = Number(s) || 0;
+    const b = Number(e) || 0;
+    return Math.abs(b - a);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  const getDriverDisplayName = (d) => {
+    if (!d) return null;
+    return d.fullName || d.name || d.username || `${d.firstName || ''} ${d.lastName || ''}`.trim() || null;
+  };
+
+  const filteredLogs = useMemo(() => {
+    const term = (searchTerm || '').toLowerCase();
+    return logs.filter(log => {
+      const rv = resolveVehicle(log);
+      const vehicleLabel = rv ? `${rv.plateNumber || ''} ${formatVehicleLabel(rv)}`.toLowerCase() : '';
+      const matchesSearch = !term || String(log.remarks || '').toLowerCase().includes(term) || vehicleLabel.includes(term);
+      const matchesVehicle = vehicleFilter === 'all' || (rv && String(rv._id) === String(vehicleFilter));
+      return matchesSearch && matchesVehicle;
+    });
+  }, [logs, searchTerm, vehicleFilter, resolveVehicle]);
+
+  const [editingLog, setEditingLog] = useState(null);
+
+  const openEdit = (log) => {
+    // normalize vehicle id into the editable object
+    const rv = resolveVehicle(log);
+    setEditingLog({
+      ...log,
+      vehicle: rv ? rv._id : (log.vehicle || log.vehicleId || null),
+      driverId: log.driverId || (rv ? rv.assignedDriver : null),
+    });
+  };
+
+  const openCreate = () => {
+    const today = new Date().toISOString().slice(0,10);
+    const defaultVehicle = vehicles && vehicles.length ? vehicles[0]._id : '';
+    setEditingLog({ vehicle: defaultVehicle, date: today, startKm: '', endKm: '', remarks: '' });
+  };
+
+  const closeEdit = () => setEditingLog(null);
+
+  const handleSaveEdit = async () => {
+    if (!editingLog) return;
     try {
-      if (editingLog) {
-        await logsAPI.update(editingLog._id, formData);
-        setLogs(logs.map(l => l._id === editingLog._id ? { ...l, ...formData } : l));
-        toast.success('Log updated successfully');
+      const payload = {
+        vehicleId: editingLog.vehicle,
+        driverId: editingLog.driverId,
+        date: editingLog.date,
+        startKm: Number(editingLog.startKm) || 0,
+        endKm: Number(editingLog.endKm) || 0,
+        remarks: editingLog.remarks || '',
+      };
+
+      // client-side validation to give quicker feedback
+      if (!payload.vehicleId) return toast.error('Please select a vehicle');
+      if (payload.endKm === 0 || isNaN(payload.endKm)) return toast.error('Please provide a valid End KM');
+
+      if (editingLog._id) {
+        await logsAPI.update(editingLog._id, payload);
+        toast.success('Log updated');
       } else {
-        const response = await logsAPI.create(formData);
-        setLogs([...logs, response.data]);
-        toast.success('Log created successfully');
+        await logsAPI.create(payload);
+        toast.success('Log created');
       }
-      
-      setShowModal(false);
-      setEditingLog(null);
-      resetForm();
-    } catch (error) {
-      console.error('Error saving log:', error);
-      toast.error('Failed to save log');
+
+      fetchData();
+      closeEdit();
+    } catch (err) {
+      console.error('Save log error:', err);
+      const msg = err?.response?.data?.message || err.message || 'Failed to save log';
+      toast.error(msg);
     }
   };
 
-  const handleEdit = (log) => {
-    setEditingLog(log);
-    setFormData({
-      vehicleId: log.vehicleId || '',
-      date: log.date ? new Date(log.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      startLocation: log.startLocation || '',
-      endLocation: log.endLocation || '',
-      startOdometer: log.startOdometer || '',
-      endOdometer: log.endOdometer || '',
-      notes: log.notes || '',
-    });
-    setShowModal(true);
-  };
-
-  const handleDelete = async (logId) => {
-    if (!window.confirm('Are you sure you want to delete this log?')) return;
-
+  const handleDelete = async (id) => {
     try {
-      await logsAPI.delete(logId);
-      setLogs(logs.filter(l => l._id !== logId));
-      toast.success('Log deleted successfully');
-    } catch (error) {
-      console.error('Error deleting log:', error);
+      await logsAPI.delete(id);
+      toast.success('Log deleted');
+      fetchData();
+    } catch (err) {
+      console.error(err);
       toast.error('Failed to delete log');
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      vehicleId: '',
-      date: new Date().toISOString().split('T')[0],
-      startLocation: '',
-      endLocation: '',
-      startOdometer: '',
-      endOdometer: '',
-      notes: '',
-    });
-  };
-
-  const calculateDistance = (start, end) => {
-    if (!start || !end) return 0;
-    const distance = parseFloat(end) - parseFloat(start);
-    return distance > 0 ? distance : 0;
-  };
-
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = 
-      log.startLocation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.endLocation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicles.find(v => v._id === log.vehicleId)?.make?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicles.find(v => v._id === log.vehicleId)?.model?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesVehicle = vehicleFilter === 'all' || log.vehicleId === vehicleFilter;
-    return matchesSearch && matchesVehicle;
-  });
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
+  if (loading) return (<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" /></div>);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Driver Logs</h1>
-          <p className="text-gray-600">Manage daily trip logs and odometer readings</p>
+          <h1 className="text-2xl font-bold text-gray-900">Trip Logs</h1>
+          <p className="text-gray-600">Create and manage trip logs for vehicles.</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center space-x-2"
-        >
+        <button onClick={openCreate} className="btn-primary flex items-center space-x-2">
           <Plus className="h-4 w-4" />
           <span>New Log</span>
         </button>
       </div>
 
-      {/* Filters and Search */}
       <div className="card">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
@@ -162,7 +164,7 @@ const Logs = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search logs..."
+                placeholder="Search by plate, vehicle, or remarks..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="input-field pl-10"
@@ -171,275 +173,130 @@ const Logs = () => {
           </div>
           <div className="flex items-center space-x-2">
             <Filter className="h-4 w-4 text-gray-400" />
-            <select
-              value={vehicleFilter}
-              onChange={(e) => setVehicleFilter(e.target.value)}
-              className="input-field"
-            >
+            <select className="input-field" value={vehicleFilter} onChange={(e) => setVehicleFilter(e.target.value)}>
               <option value="all">All Vehicles</option>
-              {vehicles.map(vehicle => (
-                <option key={vehicle._id} value={vehicle._id}>
-                  {vehicle.year} {vehicle.make} {vehicle.model}
-                </option>
-              ))}
+              {vehicles.map(v => (<option key={v._id} value={v._id}>{v.plateNumber ? `${v.plateNumber} — ${formatVehicleLabel(v)}` : formatVehicleLabel(v)}</option>))}
             </select>
           </div>
         </div>
       </div>
 
-      {/* Logs Table */}
       <div className="card">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Log Entry
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Vehicle
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trip Details
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Distance
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="table-header">Date</th>
+                <th className="table-header">Vehicle</th>
+                <th className="table-header">Plate</th>
+                <th className="table-header">Start KM</th>
+                <th className="table-header">End KM</th>
+                <th className="table-header">Distance</th>
+                <th className="table-header">Remarks</th>
+                <th className="table-header">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredLogs.map((log) => (
-                <tr key={log._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <FileText className="h-5 w-5 text-primary-600" />
-                      <div className="ml-3">
-                        <div className="text-sm font-medium text-gray-900">
-                          Trip Log
+              {filteredLogs.map(log => {
+                const rv = resolveVehicle(log);
+                return (
+                  <tr key={log._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.date ? new Date(log.date).toLocaleDateString() : '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center"><Truck className="h-4 w-4 text-primary-600" /></div>
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900">{rv ? formatVehicleLabel(rv) : 'Unknown Vehicle'}</div>
+                          <div className="text-sm text-gray-500">{rv ? (rv.type || '') : ''}</div>
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {new Date(log.date).toLocaleDateString()}
-                        </div>
-                        {log.notes && (
-                          <div className="text-xs text-gray-400">
-                            {log.notes}
-                          </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-primary-600">{rv ? (rv.plateNumber || rv.licensePlate || '—') : '—'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.startKm ?? '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.endKm ?? '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary-600">{calculateDistance(log.startKm, log.endKm)} km</td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{log.remarks || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => openEdit(log)} className="flex items-center justify-center w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 shadow-sm" title="Edit" aria-label="Edit"><Edit className="h-4 w-4" /></button>
+                        {user?.role === 'admin' && (
+                          <button onClick={() => handleDelete(log._id)} className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 shadow-sm" title="Delete" aria-label="Delete"><Trash2 className="h-4 w-4" /></button>
                         )}
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {vehicles.find(v => v._id === log.vehicleId) ? (
-                      <div className="flex items-center">
-                        <Truck className="h-4 w-4 text-gray-400 mr-2" />
-                        <span className="text-sm text-gray-900">
-                          {vehicles.find(v => v._id === log.vehicleId)?.year} {' '}
-                          {vehicles.find(v => v._id === log.vehicleId)?.make} {' '}
-                          {vehicles.find(v => v._id === log.vehicleId)?.model}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-500">Unknown Vehicle</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">
-                      <div className="flex items-center mb-1">
-                        <MapPin className="h-4 w-4 text-green-500 mr-1" />
-                        <span className="text-gray-600">Start: {log.startLocation}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 text-red-500 mr-1" />
-                        <span className="text-gray-600">End: {log.endLocation}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      <div className="text-gray-500">
-                        Start: {log.startOdometer} km
-                      </div>
-                      <div className="text-gray-500">
-                        End: {log.endOdometer} km
-                      </div>
-                      <div className="font-medium text-primary-600">
-                        Total: {calculateDistance(log.startOdometer, log.endOdometer)} km
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleEdit(log)}
-                        className="text-primary-600 hover:text-primary-900"
-                      >
-                        Edit
-                      </button>
-                      {(user.role === 'admin') && (
-                        <button
-                          onClick={() => handleDelete(log._id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-
-        {filteredLogs.length === 0 && (
-          <div className="text-center py-8">
-            <FileText className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No logs found</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              {searchTerm || vehicleFilter !== 'all' 
-                ? 'Try adjusting your search or filter criteria.'
-                : 'Get started by creating a new log entry.'
-              }
-            </p>
-          </div>
-        )}
       </div>
+      <EditModal log={editingLog} vehicles={vehicles} drivers={drivers} onChange={setEditingLog} onCancel={closeEdit} onSave={handleSaveEdit} getDriverDisplayName={getDriverDisplayName} />
+    </div>
+  );
+};
 
-      {/* Add/Edit Log Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
-            
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  {editingLog ? 'Edit Log Entry' : 'New Log Entry'}
-                </h3>
-                
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Vehicle</label>
-                    <select
-                      value={formData.vehicleId}
-                      onChange={(e) => setFormData({...formData, vehicleId: e.target.value})}
-                      className="input-field mt-1"
-                      required
-                    >
-                      <option value="">Select Vehicle</option>
-                      {vehicles.map(vehicle => (
-                        <option key={vehicle._id} value={vehicle._id}>
-                          {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.licensePlate || 'No Plate'}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Date</label>
-                    <input
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => setFormData({...formData, date: e.target.value})}
-                      className="input-field mt-1"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Start Location</label>
-                      <input
-                        type="text"
-                        value={formData.startLocation}
-                        onChange={(e) => setFormData({...formData, startLocation: e.target.value})}
-                        className="input-field mt-1"
-                        placeholder="Starting point..."
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">End Location</label>
-                      <input
-                        type="text"
-                        value={formData.endLocation}
-                        onChange={(e) => setFormData({...formData, endLocation: e.target.value})}
-                        className="input-field mt-1"
-                        placeholder="Destination..."
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Start Odometer (km)</label>
-                      <input
-                        type="number"
-                        value={formData.startOdometer}
-                        onChange={(e) => setFormData({...formData, startOdometer: e.target.value})}
-                        className="input-field mt-1"
-                        placeholder="0"
-                        min="0"
-                        step="0.1"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">End Odometer (km)</label>
-                      <input
-                        type="number"
-                        value={formData.endOdometer}
-                        onChange={(e) => setFormData({...formData, endOdometer: e.target.value})}
-                        className="input-field mt-1"
-                        placeholder="0"
-                        min="0"
-                        step="0.1"
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Notes</label>
-                    <textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                      className="input-field mt-1"
-                      rows="3"
-                      placeholder="Any additional information about the trip..."
-                    />
-                  </div>
-                </form>
-              </div>
-              
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  className="btn-primary w-full sm:w-auto sm:ml-3"
-                >
-                  {editingLog ? 'Update' : 'Create'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setEditingLog(null);
-                    resetForm();
-                  }}
-                  className="btn-secondary w-full sm:w-auto mt-3 sm:mt-0"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
+// Edit modal (simple inline modal)
+const EditModal = ({ log, vehicles, drivers, onChange, onCancel, onSave, getDriverDisplayName }) => {
+  useEffect(() => {
+    if (log && log.vehicle) {
+      const selectedVehicle = vehicles.find(v => v._id === log.vehicle);
+      if (selectedVehicle && selectedVehicle.assignedDriver) {
+        if (log.driverId !== selectedVehicle.assignedDriver) {
+          onChange({ ...log, driverId: selectedVehicle.assignedDriver });
+        }
+      }
+    }
+  }, [log, vehicles, onChange]);
+
+  if (!log) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-lg w-11/12 max-w-2xl p-6">
+  <h2 className="text-lg font-semibold mb-4">{log._id ? 'Edit Log' : 'New Log'}</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-700">Date</label>
+            <input type="date" className="input-field" value={log.date ? new Date(log.date).toISOString().slice(0,10) : ''} onChange={(e) => onChange({ ...log, date: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700">Vehicle</label>
+            <select className="input-field" value={log.vehicle || log.vehicleId || ''} onChange={(e) => onChange({ ...log, vehicle: e.target.value })}>
+              <option value="">Select vehicle</option>
+              {vehicles.map(v => <option key={v._id} value={v._id}>{v.plateNumber ? `${v.plateNumber} — ${[v.year, v.manufacturer, v.model].filter(Boolean).join(' ')}` : [v.year, v.manufacturer, v.model].filter(Boolean).join(' ')}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700">Start KM</label>
+            <input type="number" className="input-field" value={log.startKm ?? ''} onChange={(e) => onChange({ ...log, startKm: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700">End KM</label>
+            <input type="number" className="input-field" value={log.endKm ?? ''} onChange={(e) => onChange({ ...log, endKm: e.target.value })} />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm text-gray-700">Remarks</label>
+            <input className="input-field w-full" value={log.remarks || ''} onChange={(e) => onChange({ ...log, remarks: e.target.value })} />
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm text-gray-700">Driver</label>
+            <select
+              className="input-field"
+              value={log.driverId || ''}
+              onChange={(e) => onChange({ ...log, driverId: e.target.value })}
+            >
+              <option value="">Select driver</option>
+              {drivers.map(d => <option key={d._id} value={d._id}>{getDriverDisplayName(d)}</option>)}
+            </select>
           </div>
         </div>
-      )}
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button className="btn-secondary" onClick={onCancel}>Cancel</button>
+          <button className="btn-primary" onClick={onSave}>Save</button>
+        </div>
+      </div>
     </div>
   );
 };
