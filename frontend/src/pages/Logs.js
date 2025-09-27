@@ -92,8 +92,10 @@ const Logs = () => {
 
   const openCreate = () => {
     const today = new Date().toISOString().slice(0,10);
-    const defaultVehicle = vehicles && vehicles.length ? vehicles[0]._id : '';
-    setEditingLog({ vehicle: defaultVehicle, date: today, startKm: '', endKm: '', remarks: '' });
+    const defaultVehicle = vehicles && vehicles.length ? vehicles[0] : null;
+    const startKm = defaultVehicle ? defaultVehicle.currentKm : '';
+    const defaultVehicleId = defaultVehicle ? defaultVehicle._id : '';
+    setEditingLog({ vehicle: defaultVehicleId, date: today, startKm, endKm: '', remarks: '' });
   };
 
   const closeEdit = () => setEditingLog(null);
@@ -241,15 +243,31 @@ const EditModal = ({ log, vehicles, drivers, onChange, onCancel, onSave, getDriv
   useEffect(() => {
     if (log && log.vehicle) {
       const selectedVehicle = vehicles.find(v => v._id === log.vehicle);
-      if (selectedVehicle && selectedVehicle.assignedDriver) {
-        if (log.driverId !== selectedVehicle.assignedDriver) {
-          onChange({ ...log, driverId: selectedVehicle.assignedDriver });
+      if (selectedVehicle) {
+        const updates = {};
+        // auto-select assigned driver
+        if (selectedVehicle.assignedDriver && log.driverId !== selectedVehicle.assignedDriver) {
+          updates.driverId = selectedVehicle.assignedDriver;
+        }
+        // auto-fill startKm, but only if it's a new log or the km is not set
+        if (!log._id && log.startKm !== selectedVehicle.currentKm) {
+          updates.startKm = selectedVehicle.currentKm;
+        }
+        if (Object.keys(updates).length > 0) {
+          onChange({ ...log, ...updates });
         }
       }
     }
   }, [log, vehicles, onChange]);
 
   if (!log) return null;
+
+  const handleVehicleChange = (e) => {
+    const vehicleId = e.target.value;
+    const selectedVehicle = vehicles.find(v => v._id === vehicleId);
+    const startKm = selectedVehicle ? selectedVehicle.currentKm : '';
+    onChange({ ...log, vehicle: vehicleId, startKm });
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -262,7 +280,7 @@ const EditModal = ({ log, vehicles, drivers, onChange, onCancel, onSave, getDriv
           </div>
           <div>
             <label className="block text-sm text-gray-700">Vehicle</label>
-            <select className="input-field" value={log.vehicle || log.vehicleId || ''} onChange={(e) => onChange({ ...log, vehicle: e.target.value })}>
+            <select className="input-field" value={log.vehicle || log.vehicleId || ''} onChange={handleVehicleChange}>
               <option value="">Select vehicle</option>
               {vehicles.map(v => <option key={v._id} value={v._id}>{v.plateNumber ? `${v.plateNumber} — ${[v.year, v.manufacturer, v.model].filter(Boolean).join(' ')}` : [v.year, v.manufacturer, v.model].filter(Boolean).join(' ')}</option>)}
             </select>
