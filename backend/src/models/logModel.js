@@ -26,6 +26,10 @@ const driverLogSchema = new mongoose.Schema ({
     distance: {
         type:Number,
     },
+    loggedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+    },
     remarks: {
         type: String,
     },

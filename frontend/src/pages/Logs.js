@@ -219,9 +219,11 @@ const Logs = () => {
                 <th className="table-header">Date</th>
                 <th className="table-header">Vehicle</th>
                 <th className="table-header">Plate</th>
+                <th className="table-header">Driver</th>
                 <th className="table-header">Start KM</th>
                 <th className="table-header">End KM</th>
                 <th className="table-header">Distance</th>
+                <th className="table-header">Logged By</th>
                 <th className="table-header">Remarks</th>
                 <th className="table-header">Actions</th>
               </tr>
@@ -242,9 +244,11 @@ const Logs = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-primary-600">{rv ? (rv.plateNumber || rv.licensePlate || '—') : '—'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.driverId?.fullName || log.driverId?.name || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.startKm ?? '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.endKm ?? '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary-600">{calculateDistance(log.startKm, log.endKm)} km</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.loggedBy?.fullName || log.loggedBy?.name || '-'}</td>
                     <td className="px-6 py-4 text-sm text-gray-700">{log.remarks || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">

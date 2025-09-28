@@ -50,7 +50,8 @@ const createLog = async (req, res) => {
         }
 
         const log = new DriverLog({
-            driverId: userId,
+            driverId: vehicle.assignedDriver,
+            loggedBy: userId,
             vehicleId,
             date: date ? new Date(date) : new Date(),
             startKm: startKmToUse,
@@ -131,7 +132,8 @@ const getLogs = async (req, res) => {
     try {
         const logs = await DriverLog.find()
             .populate('driverId', 'name fullName username')
-            .populate('vehicleId', 'plateNumber manufacturer model year');
+            .populate('vehicleId', 'plateNumber manufacturer model year')
+            .populate('loggedBy', 'name fullName username');
         res.status(200).json(logs);
     } catch (error) {
         console.error("Error fetching logs:", error);
