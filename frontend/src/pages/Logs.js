@@ -42,7 +42,7 @@ const Logs = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const logsPromise = user?.role === 'admin' ? logsAPI.getAll() : logsAPI.getMyLogs();
+      const logsPromise = (user?.role === 'admin' || user?.role === 'manager') ? logsAPI.getAll() : logsAPI.getMyLogs();
       const [logsRes, vehiclesRes, driversRes] = await Promise.all([
         logsPromise,
         vehiclesAPI.getAll(),
@@ -253,7 +253,7 @@ const Logs = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <button onClick={() => openEdit(log)} className="flex items-center justify-center w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 shadow-sm" title="Edit" aria-label="Edit"><Edit className="h-4 w-4" /></button>
-                        {user?.role === 'admin' && (
+                        {(user?.role === 'admin' || user?.role === 'manager') && (
                           <button onClick={() => setLogToDelete(log._id)} className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 shadow-sm" title="Delete" aria-label="Delete"><Trash2 className="h-4 w-4" /></button>
                         )}
                       </div>
