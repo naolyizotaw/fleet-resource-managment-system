@@ -190,10 +190,62 @@ const getLogByVehicle = async (req, res) => {
 const deleteLog = async (req, res) => {
     try {
         const { id } = req.params;
-        const log = await DriverLog.findByIdAndDelete(id);
 
-        if (!log) {
+        // First, find the log to be deleted to get its details
+        const logToDelete = await DriverLog.findById(id);
+        if (!logToDelete) {
             return res.status(404).json({ message: "Log not found" });
+        }
+
+        const { vehicleId } = logToDelete;
+
+        // Find the current latest log for the vehicle
+        const latestLog = await DriverLog.findOne({ vehicleId }).sort({ date: -1, createdAt: -1 });
+
+        // Now, delete the log
+        await DriverLog.findByIdAndDelete(id);
+
+        // Check if the deleted log was the latest one
+        if (latestLog && latestLog._id.toString() === id) {
+            // The deleted log was the most recent one. We need to find the *new* latest log.
+            const newLatestLog = await DriverLog.findOne({ vehicleId }).sort({ date: -1, createdAt: -1 });
+
+            let newCurrentKm;
+
+            if (newLatestLog) {
+                // If there's a new latest log, use its endKm
+                newCurrentKm = newLatestLog.endKm;
+            } else {
+                // No logs are left for this vehicle.
+                // Revert to the vehicle's initial KM.
+                // We can find the oldest log to get the initial startKm.
+                const oldestLog = await DriverLog.findOne({ vehicleId }).sort({ date: 1, createdAt: 1 });
+                
+                // The startKm of the very first log should be the original Km of the vehicle.
+                // If even that is gone (or never existed), we look at the vehicle itself.
+                // But since we just deleted the last log, we can look at the deleted log's details.
+                // A better approach is to find the first log ever created for the vehicle to find its initial state.
+                // However, an even simpler logic is to use the startKm of the log we are deleting if it was the only one.
+                
+                // Let's find the vehicle to update it.
+                const vehicle = await Vehicle.findById(vehicleId);
+                if (vehicle) {
+                    // To be safe, let's find the first log ever created for this vehicle to determine the original Km
+                    // This is a bit tricky because we've already deleted one.
+                    // The logToDelete holds the data of the deleted log.
+                    // If it was the only log, its startKm should be the vehicle's original Km.
+                    
+                    // Let's check if any logs remain. We already did with newLatestLog.
+                    // If newLatestLog is null, no logs remain.
+                    // We will set the currentKm to the startKm of the log we just deleted,
+                    // as it represents the state before that trip.
+                    newCurrentKm = logToDelete.startKm;
+                }
+            }
+
+            if (newCurrentKm !== undefined) {
+                await Vehicle.findByIdAndUpdate(vehicleId, { currentKm: newCurrentKm });
+            }
         }
 
         res.status(200).json({ message: "Log deleted successfully" });
