@@ -4,6 +4,31 @@ import { logsAPI, vehiclesAPI, usersAPI } from '../services/api';
 import { Truck, Edit, Trash2, Search, Plus, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+const DeleteConfirmationModal = ({ onConfirm, onCancel }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-lg w-11/12 max-w-md p-6 text-center shadow-xl">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+          <Trash2 className="h-6 w-6 text-red-500" />
+        </div>
+        <h3 className="mt-5 text-lg font-semibold text-gray-900">Delete log</h3>
+        <div className="mt-2 text-sm text-gray-600">
+          <p>Are you sure you want to delete this log?</p>
+          <p>This action cannot be undone.</p>
+        </div>
+        <div className="mt-6 flex justify-center gap-4">
+          <button type="button" className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="button" className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" onClick={onConfirm}>
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Logs = () => {
   const { user } = useAuth();
   const [logs, setLogs] = useState([]);
@@ -12,6 +37,7 @@ const Logs = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [vehicleFilter, setVehicleFilter] = useState('all');
+  const [logToDelete, setLogToDelete] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -141,6 +167,8 @@ const Logs = () => {
     } catch (err) {
       console.error(err);
       toast.error('Failed to delete log');
+    } finally {
+      setLogToDelete(null);
     }
   };
 
@@ -222,7 +250,7 @@ const Logs = () => {
                       <div className="flex items-center gap-2">
                         <button onClick={() => openEdit(log)} className="flex items-center justify-center w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 shadow-sm" title="Edit" aria-label="Edit"><Edit className="h-4 w-4" /></button>
                         {user?.role === 'admin' && (
-                          <button onClick={() => handleDelete(log._id)} className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 shadow-sm" title="Delete" aria-label="Delete"><Trash2 className="h-4 w-4" /></button>
+                          <button onClick={() => setLogToDelete(log._id)} className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 shadow-sm" title="Delete" aria-label="Delete"><Trash2 className="h-4 w-4" /></button>
                         )}
                       </div>
                     </td>
@@ -234,6 +262,12 @@ const Logs = () => {
         </div>
       </div>
       <EditModal log={editingLog} vehicles={vehicles} drivers={drivers} onChange={setEditingLog} onCancel={closeEdit} onSave={handleSaveEdit} getDriverDisplayName={getDriverDisplayName} />
+      {logToDelete && (
+        <DeleteConfirmationModal
+          onConfirm={() => handleDelete(logToDelete)}
+          onCancel={() => setLogToDelete(null)}
+        />
+      )}
     </div>
   );
 };
