@@ -74,11 +74,11 @@ const createMaintenance = async (req, res) => {
 const getMaintenances = async (req, res) => {
     try {
     const request = await MaintenanceRequest.find({})
-      .populate('vehicleId', 'plateNumber model')
+      .populate('vehicleId', 'plateNumber model year manufacturer make')
       .populate('driverId', 'fullName username')
       .populate('requestedBy', 'fullName username')
       .populate('approvedBy', 'fullName username');
-    return res.status(200).json(request);
+        return res.status(200).json(request);
     } catch (err) {
         return res.status(500).json({ message: err.message });
     }
@@ -95,7 +95,7 @@ const getMaintenanceById = async (req, res) => {
       return res.status(400).json({ message: 'Invalid Request id' });
     }
     const request = await MaintenanceRequest.findById(id)
-      .populate('vehicleId', 'plateNumber model')
+      .populate('vehicleId', 'plateNumber model year manufacturer make')
       .populate('driverId', 'fullName username')
       .populate('requestedBy', 'fullName username')
       .populate('approvedBy', 'fullName username');
@@ -124,9 +124,23 @@ const updateMaintenance = async (req, res) => {
 
     const { status, remarks, cost } = req.body;
 
-     if (request.status !== 'pending') {
-            return res.status(400).json({ message: `This request has already been ${request.status}.` });
-        }
+    // Validate allowed status transitions
+    const currentStatus = request.status;
+    const allowedTransitions = {
+      pending: ["approved", "rejected", "completed"],
+      approved: ["completed", "rejected"],
+      rejected: [],
+      completed: [],
+    };
+
+    if (status) {
+      const allowed = allowedTransitions[currentStatus] || [];
+      if (!allowed.includes(status)) {
+        return res.status(400).json({
+          message: `Cannot change status from ${currentStatus} to ${status}.`,
+        });
+      }
+    }
    
     if (remarks) {
       request.remarks = remarks;
@@ -152,6 +166,14 @@ const updateMaintenance = async (req, res) => {
       request.status = status;
     }
 
+    // Allow updating cost without status change only if not already final (completed/rejected)
+    if (!status && cost !== undefined) {
+      if (currentStatus === 'completed' || currentStatus === 'rejected') {
+        return res.status(400).json({ message: `Cannot update cost for a ${currentStatus} request.` });
+      }
+      request.cost = cost;
+    }
+
     await request.save();
 
    
@@ -164,7 +186,7 @@ const updateMaintenance = async (req, res) => {
     }
 
     return res.status(200).json({
-            message: `Maintenance request has been ${status}.`,
+            message: status ? `Maintenance request has been ${status}.` : 'Maintenance request updated.',
            request
         });
   } catch (err) {
@@ -216,7 +238,7 @@ const getMyMaintenanceRequests = async (req, res) => {
     }
 
     const requests = await MaintenanceRequest.find(query)
-      .populate('vehicleId', 'plateNumber model')
+      .populate('vehicleId', 'plateNumber model year manufacturer make')
       .populate('driverId', 'fullName username')
       .populate('requestedBy', 'fullName username')
       .populate('approvedBy', 'fullName username');

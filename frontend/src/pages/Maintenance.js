@@ -17,6 +17,9 @@ const Maintenance = () => {
   const [conflictInfo, setConflictInfo] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState(null);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [requestToComplete, setRequestToComplete] = useState(null);
+  const [completeForm, setCompleteForm] = useState({ cost: '', remarks: '' });
 
   const [formData, setFormData] = useState({
     vehicleId: '',
@@ -125,7 +128,8 @@ const Maintenance = () => {
         console.log('Updating maintenance', editingRequest._id, updatePayload);
         const updateRes = await maintenanceAPI.update(editingRequest._id, updatePayload);
         console.log('Update response:', updateRes);
-        setRequests(requests.map(r => r._id === editingRequest._id ? { ...r, ...formData } : r));
+        const updated = updateRes.data?.request || updateRes.data;
+        setRequests(requests.map(r => r._id === editingRequest._id ? updated : r));
         toast.success('Maintenance request updated successfully');
       } else {
         console.log('Creating maintenance payload:', payload);
@@ -157,10 +161,11 @@ const Maintenance = () => {
     setEditingRequest(request);
     setFormData({
       vehicleId: request.vehicleId || '',
+      category: request.category || '',
       description: request.description || '',
       priority: request.priority || 'medium',
-      estimatedCost: request.estimatedCost || '',
-      notes: request.notes || '',
+      estimatedCost: request.cost || request.estimatedCost || '',
+      notes: request.remarks || request.notes || '',
     });
     setShowModal(true);
   };
@@ -168,11 +173,40 @@ const Maintenance = () => {
   const handleStatusUpdate = async (requestId, newStatus) => {
     try {
       const response = await maintenanceAPI.update(requestId, { status: newStatus });
-      setRequests(requests.map(r => r._id === requestId ? response.data : r));
+      const updated = response.data?.request || response.data;
+      setRequests(requests.map(r => r._id === requestId ? updated : r));
       toast.success('Status updated successfully');
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');
+    }
+  };
+
+  const openCompleteModal = (request) => {
+    setRequestToComplete(request);
+    setCompleteForm({ cost: request.cost ? String(request.cost) : '', remarks: request.remarks || '' });
+    setShowCompleteModal(true);
+  };
+
+  const handleCompleteSubmit = async () => {
+    if (!requestToComplete) return;
+    const parsed = completeForm.cost !== '' ? Number(completeForm.cost) : undefined;
+    if (parsed === undefined || Number.isNaN(parsed) || parsed < 0) {
+      toast.error('Please enter a valid cost (0 or more).');
+      return;
+    }
+    try {
+      const res = await maintenanceAPI.update(requestToComplete._id, { status: 'completed', cost: parsed, remarks: completeForm.remarks });
+      const updated = res.data?.request || res.data;
+      setRequests(requests.map(r => r._id === requestToComplete._id ? updated : r));
+      setShowCompleteModal(false);
+      setRequestToComplete(null);
+      setCompleteForm({ cost: '', remarks: '' });
+      toast.success('Maintenance marked as completed');
+    } catch (err) {
+      console.error('Failed to complete request:', err);
+      const message = err?.response?.data?.message || err?.message || 'Failed to complete request';
+      toast.error(message);
     }
   };
 
@@ -233,6 +267,8 @@ const Maintenance = () => {
         return <Clock size={16} className="inline-block align-middle text-yellow-500" />;
       case 'rejected':
         return <AlertCircle size={16} className="inline-block align-middle text-red-500" />;
+      case 'completed':
+        return <CheckCircle size={16} className="inline-block align-middle text-emerald-600" />;
       default:
         return <Clock size={16} className="inline-block align-middle text-gray-500" />;
     }
@@ -246,6 +282,8 @@ const Maintenance = () => {
         return 'bg-yellow-100 text-yellow-800';
       case 'rejected':
         return 'bg-red-100 text-red-800';
+      case 'completed':
+        return 'bg-emerald-100 text-emerald-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -324,6 +362,7 @@ const Maintenance = () => {
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
+              <option value="completed">Completed</option>
             </select>
           </div>
         </div>
@@ -499,6 +538,20 @@ const Maintenance = () => {
                           >
                             <AlertCircle className="h-3 w-3" />
                             <span>Reject</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {(user.role === 'admin' || user.role === 'manager') && request.status === 'approved' && (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => openCompleteModal(request)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-medium hover:bg-emerald-100"
+                            title="Mark Completed"
+                            aria-label="Mark Completed"
+                          >
+                            <CheckCircle className="h-3 w-3" />
+                            <span>Complete</span>
                           </button>
                         </div>
                       )}
@@ -696,6 +749,56 @@ const Maintenance = () => {
                   className="px-4 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700"
                 >
                   Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Complete request modal */}
+      {showCompleteModal && requestToComplete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900">Mark as Completed</h3>
+              <p className="text-sm text-gray-600 mt-1">Enter the final maintenance cost and optional remarks.</p>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Cost</label>
+                  <input
+                    type="number"
+                    value={completeForm.cost}
+                    onChange={(e) => setCompleteForm({ ...completeForm, cost: e.target.value })}
+                    className="input-field mt-1"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Remarks</label>
+                  <textarea
+                    value={completeForm.remarks}
+                    onChange={(e) => setCompleteForm({ ...completeForm, remarks: e.target.value })}
+                    className="input-field mt-1"
+                    rows="3"
+                    placeholder="Notes about the maintenance completion..."
+                  />
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => { setShowCompleteModal(false); setRequestToComplete(null); setCompleteForm({ cost: '', remarks: '' }); }}
+                  className="px-4 py-2 rounded-md border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCompleteSubmit}
+                  className="px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
+                >
+                  Mark Completed
                 </button>
               </div>
             </div>
