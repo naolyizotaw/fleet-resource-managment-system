@@ -7,13 +7,13 @@ const jwt = require("jsonwebtoken");
 //@access public
 const register = async (req, res) => {
     try {
-    const { username, password, role } = req.body;
+    const { fullName, username, password, role } = req.body;
 
     //hashed password 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // create new user and save it to database 
-    const newUser = new User({ username, password: hashedPassword, role});
+    const newUser = new User({ fullName, username, password: hashedPassword, role});
     await newUser.save();
     res.status(201).json({message: `User registerd with username: ${username}`});
 

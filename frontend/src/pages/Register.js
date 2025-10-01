@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Eye, EyeOff, Truck, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, UserPlus } from 'lucide-react';
 
 const Register = () => {
   const [formData, setFormData] = useState({
+    fullName: '',
     username: '',
     password: '',
     confirmPassword: '',
@@ -44,6 +45,10 @@ const Register = () => {
 
     if (!formData.username.trim()) {
       newErrors.username = 'Username is required';
+    }
+
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = 'Full Name is required';
     }
 
     setErrors(newErrors);
@@ -89,6 +94,21 @@ const Register = () => {
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
+            <div>
+              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+                Full Name
+              </label>
+              <input
+                id="fullName"
+                name="fullName"
+                type="text"
+                required
+                className={`mt-1 appearance-none block w-full px-3 py-2 border ${errors.fullName ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                value={formData.fullName}
+                onChange={handleChange}
+              />
+              {errors.fullName && <p className="mt-2 text-sm text-red-600">{errors.fullName}</p>}
+            </div>
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700">
                 Username
