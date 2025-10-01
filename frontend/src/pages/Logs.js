@@ -112,10 +112,12 @@ const Logs = () => {
   const openEdit = (log) => {
     // normalize vehicle id into the editable object
     const rv = resolveVehicle(log);
+    const driver = log.driverId;
+    const driverId = typeof driver === 'object' && driver !== null ? driver._id : driver;
     setEditingLog({
       ...log,
       vehicle: rv ? rv._id : (log.vehicle || log.vehicleId || null),
-      driverId: log.driverId || (rv ? rv.assignedDriver : null),
+      driverId: driverId || (rv ? (typeof rv.assignedDriver === 'object' ? rv.assignedDriver._id : rv.assignedDriver) : null),
     });
   };
 
@@ -144,6 +146,30 @@ const Logs = () => {
       // client-side validation to give quicker feedback
       if (!payload.vehicleId) return toast.error('Please select a vehicle');
       if (payload.endKm === 0 || isNaN(payload.endKm)) return toast.error('Please provide a valid End KM');
+
+      // Prevent creating more than one log per vehicle per day (client-side check)
+      const normalizeDateStr = (d) => {
+        if (!d) return '';
+        // if it's already YYYY-MM-DD, keep it; else convert
+        if (/^\d{4}-\d{2}-\d{2}$/.test(String(d))) return String(d);
+        try { return new Date(d).toISOString().slice(0, 10); } catch { return String(d); }
+      };
+      const targetDateStr = normalizeDateStr(payload.date);
+      const conflict = logs.some(l => {
+        const lVeh = l.vehicle || l.vehicleId;
+        const lVehId = typeof lVeh === 'object' && lVeh !== null ? lVeh._id : lVeh;
+        const lDateStr = normalizeDateStr(l.date);
+        const sameVehicle = String(lVehId) === String(payload.vehicleId);
+        const sameDay = lDateStr === targetDateStr;
+        const differentRecord = !editingLog._id || String(l._id) !== String(editingLog._id);
+        return sameVehicle && sameDay && differentRecord;
+      });
+      if (!editingLog._id && conflict) {
+        return toast.error('A log for this vehicle already exists for the selected date');
+      }
+      if (editingLog._id && conflict) {
+        return toast.error('Another log for this vehicle already exists for the selected date');
+      }
 
       if (editingLog._id) {
         await logsAPI.update(editingLog._id, payload);
@@ -234,6 +260,7 @@ const Logs = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredLogs.map(log => {
                 const rv = resolveVehicle(log);
+                const driverLabel = getDriverDisplayName(log.driverId) || getDriverDisplayName(rv?.assignedDriver) || '-';
                 return (
                   <tr key={log._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.date ? new Date(log.date).toLocaleDateString() : '-'}</td>
@@ -247,7 +274,7 @@ const Logs = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-primary-600">{rv ? (rv.plateNumber || rv.licensePlate || '—') : '—'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.driverId?.fullName || log.driverId?.name || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{driverLabel}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.startKm ?? '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.endKm ?? '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary-600">{calculateDistance(log.startKm, log.endKm)} km</td>
@@ -256,9 +283,17 @@ const Logs = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <button onClick={() => openEdit(log)} className="flex items-center justify-center w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 shadow-sm" title="Edit" aria-label="Edit"><Edit className="h-4 w-4" /></button>
-                        {(user?.role === 'admin' || user?.role === 'manager') && (
-                          <button onClick={() => setLogToDelete(log._id)} className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 shadow-sm" title="Delete" aria-label="Delete"><Trash2 className="h-4 w-4" /></button>
-                        )}
+                        {(() => {
+                          const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
+                          const isOwner = log?.driverId && (typeof log.driverId === 'object' ? log.driverId._id : log.driverId) && String((typeof log.driverId === 'object' ? log.driverId._id : log.driverId)) === String(user?.id || user?._id);
+                          const canUserDeleteOwn = !isAdminOrManager && isOwner && (log.isEditable !== false);
+                          if (isAdminOrManager || canUserDeleteOwn) {
+                            return (
+                              <button onClick={() => setLogToDelete(log._id)} className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 shadow-sm" title="Delete" aria-label="Delete"><Trash2 className="h-4 w-4" /></button>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </td>
                   </tr>
@@ -342,7 +377,7 @@ const EditModal = ({ log, vehicles, drivers, onChange, onCancel, onSave, getDriv
             <label className="block text-sm text-gray-700">Driver</label>
             <select
               className="input-field"
-              value={log.driverId || ''}
+              value={typeof log.driverId === 'object' && log.driverId !== null ? (log.driverId._id || '') : (log.driverId || '')}
               onChange={(e) => onChange({ ...log, driverId: e.target.value })}
             >
               <option value="">Select driver</option>

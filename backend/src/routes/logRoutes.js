@@ -26,7 +26,7 @@ router.get("/my", authorizeRoles("driver", "user"), getMyLogs);
 router.get("/", authorizeRoles("manager", "admin"), getLogs);
 router.get("/:id", authorizeRoles( "manager", "admin"), getLogById);
 router.get("/vehicle/:vehicleId", authorizeRoles("manager", "admin"), getLogByVehicle);
-router.delete("/:id", authorizeRoles("admin"), deleteLog);
+router.delete("/:id", authorizeRoles("admin", "manager", "driver"), deleteLog);
  
 
 

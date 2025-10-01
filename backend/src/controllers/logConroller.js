@@ -21,6 +21,21 @@ const createLog = async (req, res) => {
 
         const userId = req.user.id;
 
+        // Normalize the intended log date and restrict to one log per vehicle per day
+        const logDate = date ? new Date(date) : new Date();
+        const dayStart = new Date(logDate);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(logDate);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const existingLogSameDay = await DriverLog.findOne({
+            vehicleId,
+            date: { $gte: dayStart, $lte: dayEnd }
+        });
+        if (existingLogSameDay) {
+            return res.status(409).json({ message: "A log for this vehicle already exists for this date" });
+        }
+
         const lastLog = await DriverLog.findOne({ vehicleId }).sort({ date: -1 });
 
         // Determine the expected start KM for this new log
@@ -28,8 +43,8 @@ const createLog = async (req, res) => {
         if (lastLog) {
             startKmToUse = lastLog.endKm;
             if (date) {
-                const logDate = new Date(date);
-                if (logDate < lastLog.date) {
+                const providedLogDate = new Date(date);
+                if (providedLogDate < lastLog.date) {
                     return res.status(400).json({ message: "Log date cannot be earlier than the last log date for this vehicle" });
                 }
             }
@@ -53,7 +68,7 @@ const createLog = async (req, res) => {
             driverId: vehicle.assignedDriver,
             loggedBy: userId,
             vehicleId,
-            date: date ? new Date(date) : new Date(),
+            date: logDate,
             startKm: startKmToUse,
             endKm: endKmNum,
             distance,
@@ -68,6 +83,9 @@ const createLog = async (req, res) => {
 
         res.status(201).json({ message: "Log created successfully", log });
     } catch (error) {
+        if (error && error.code === 11000) {
+            return res.status(409).json({ message: "A log for this vehicle already exists for this date" });
+        }
         console.error("Error creating log:", error);
         res.status(500).json({ message: "Internal server error" });
     }
@@ -88,9 +106,27 @@ const updateLog = async (req, res) => {
 
         if (!log.isEditable) return res.status(403).json({ message: "Log is locked" });
 
+        // Determine target date for the update (either provided or existing)
+        const targetDate = date ? new Date(date) : new Date(log.date);
+
+        // Prevent multiple logs for the same vehicle in the same day (exclude current log)
+        const dayStart = new Date(targetDate);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(targetDate);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const conflictingLog = await DriverLog.findOne({
+            vehicleId: log.vehicleId,
+            date: { $gte: dayStart, $lte: dayEnd },
+            _id: { $ne: id }
+        });
+        if (conflictingLog) {
+            return res.status(409).json({ message: "Another log for this vehicle already exists for this date" });
+        }
+
         const prevLog = await DriverLog.findOne({
             vehicleId: log.vehicleId,
-            date: { $lt: log.date }
+            date: { $lt: targetDate }
         }).sort({ date: -1 });
 
         const startKmNum = parseFloat(bodyStartKm);
@@ -107,7 +143,7 @@ const updateLog = async (req, res) => {
         log.startKm = startKmNum;
         log.endKm = endKmNum;
         if (remarks !== undefined) log.remarks = remarks;
-        if (date) log.date = new Date(date);
+        if (date) log.date = targetDate;
         log.distance = endKmNum - startKmNum;
         await log.save();
 
@@ -119,6 +155,9 @@ const updateLog = async (req, res) => {
         res.json({ message: `Log updated successfully!`, log });
 
     } catch (error) {
+        if (error && error.code === 11000) {
+            return res.status(409).json({ message: "Another log for this vehicle already exists for this date" });
+        }
         console.error("Error updating log:", error);
         res.status(500).json({ message: "Internal server error" });
     }
@@ -199,6 +238,24 @@ const deleteLog = async (req, res) => {
             return res.status(404).json({ message: "Log not found" });
         }
 
+        // Permission checks: admins can delete any, managers can delete any, users can delete only their own editable logs
+        const role = req.user && req.user.role;
+        const requesterId = req.user && req.user.id;
+        const isAdmin = role === 'admin';
+        const isManager = role === 'manager';
+        const isOwner = requesterId && logToDelete.driverId && logToDelete.driverId.toString() === requesterId.toString();
+
+        // Note: roleMiddleware maps 'driver' to 'user' for checks, but token role may be 'user' for drivers
+        if (!isAdmin && !isManager) {
+            // Only owner may delete and only if editable
+            if (!isOwner) {
+                return res.status(403).json({ message: "You can only delete your own log" });
+            }
+            if (!logToDelete.isEditable) {
+                return res.status(403).json({ message: "This log is locked and cannot be deleted" });
+            }
+        }
+
         const { vehicleId } = logToDelete;
 
         // Find the current latest log for the vehicle
@@ -259,19 +316,18 @@ const deleteLog = async (req, res) => {
 
 //@desc Get logs for the current user
 //@route GET /api/logs/my
-//@access private (driver)
+//@access private (driver, user)
 const getMyLogs = async (req, res) => {
     try {
         const userId = req.user.id;
 
         const logs = await DriverLog.find({ driverId: userId })
-            .populate('vehicleId', 'plateNumber manufacturer model year');
+            .populate('driverId', 'name fullName username')
+            .populate('vehicleId', 'plateNumber manufacturer model year')
+            .populate('loggedBy', 'name fullName username');
 
-        if (!logs || logs.length === 0) {
-            return res.status(404).json({ message: "No logs found for this user" });
-        }
-
-        res.status(200).json(logs);
+        // Return empty list instead of 404 so frontend can render gracefully
+        return res.status(200).json(logs || []);
     } catch (error) {
         console.error("Error fetching user logs:", error);
         res.status(500).json({ message: "Internal server error" });
