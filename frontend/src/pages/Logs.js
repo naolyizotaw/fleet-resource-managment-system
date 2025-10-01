@@ -43,10 +43,13 @@ const Logs = () => {
     try {
       setLoading(true);
       const logsPromise = (user?.role === 'admin' || user?.role === 'manager') ? logsAPI.getAll() : logsAPI.getMyLogs();
+      const vehiclesPromise = (user?.role === 'admin' || user?.role === 'manager') ? vehiclesAPI.getAll() : vehiclesAPI.getMine();
+      const driversPromise = (user?.role === 'admin' || user?.role === 'manager') ? usersAPI.getDrivers() : Promise.resolve({ data: [] });
+
       const [logsRes, vehiclesRes, driversRes] = await Promise.all([
         logsPromise,
-        vehiclesAPI.getAll(),
-        usersAPI.getDrivers(),
+        vehiclesPromise,
+        driversPromise,
       ]);
 
       const fetchedLogs = logsRes?.data || logsRes || [];
