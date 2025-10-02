@@ -22,6 +22,7 @@ const FuelPage = () => {
     quantity: '',
     currentKm: '',
     purpose: '',
+    pricePerLitre: '',
     cost: '',
   });
 
@@ -107,8 +108,10 @@ const FuelPage = () => {
       maybe('fuelType', sanitize(formData.fuelType));
       maybe('quantity', sanitize(formData.quantity, true));
       maybe('currentKm', sanitize(formData.currentKm, true));
-      maybe('purpose', sanitize(formData.purpose));
-      maybe('cost', sanitize(formData.cost, true));
+  maybe('purpose', sanitize(formData.purpose));
+  maybe('pricePerLitre', sanitize(formData.pricePerLitre, true));
+  // cost will be auto-calculated by backend if pricePerLitre provided
+  maybe('cost', sanitize(formData.cost, true));
 
       if (editingRequest) {
         await fuelAPI.update(editingRequest._id, payload);
@@ -138,6 +141,7 @@ const FuelPage = () => {
       quantity: request.quantity || '',
       currentKm: request.currentKm || '',
       purpose: request.purpose || '',
+      pricePerLitre: request.pricePerLitre || '',
       cost: request.cost || '',
     });
     setShowModal(true);
@@ -181,6 +185,7 @@ const FuelPage = () => {
       quantity: '',
       currentKm: '',
       purpose: '',
+      pricePerLitre: '',
       cost: '',
     });
   };
@@ -311,11 +316,16 @@ const FuelPage = () => {
             <thead className="bg-gray-50">
                 <tr>
                 <th className="table-header">Request</th>
-                <th className="table-header">Vehicle</th>
-                <th className="table-header">Fuel Details</th>
-                <th className="table-header">KM & Purpose</th>
-                <th className="table-header">Requester</th>
-                <th className="table-header">Approval</th>
+                <th className="table-header w-64">Vehicle</th>
+                <th className="table-header w-40">Plate Number</th>
+                <th className="table-header">Fuel Type</th>
+                <th className="table-header">Quantity (L)</th>
+                <th className="table-header">Price/L</th>
+                <th className="table-header">Total Cost</th>
+                <th className="table-header">Odometer (KM)</th>
+                <th className="table-header">Purpose</th>
+                <th className="table-header w-48">Requester</th>
+                <th className="table-header w-56">Approval</th>
                 <th className="table-header">Status</th>
                 <th className="table-header">Actions</th>
               </tr>
@@ -336,44 +346,112 @@ const FuelPage = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="table-cell">
+                  <td className="table-cell w-64">
                     {(() => {
                       const vehicleObj = resolveVehicle(request);
                       if (vehicleObj) {
                         return (
-                          <div className="flex items-center">
+                          <div className="flex items-center min-w-0">
                             <Truck className="h-4 w-4 text-gray-400 mr-2" />
-                            <span className="text-sm text-gray-900">
+                            <span
+                              className="text-sm text-gray-900 truncate whitespace-nowrap"
+                              title={`${vehicleObj.year ? `${vehicleObj.year} ` : ''}${vehicleObj.manufacturer || ''} ${vehicleObj.model || ''}`.trim()}
+                            >
                               {vehicleObj.year ? `${vehicleObj.year} ` : ''}
                               {vehicleObj.manufacturer || ''} {vehicleObj.model || ''}
-                              {vehicleObj.plateNumber ? ` - ${vehicleObj.plateNumber}` : ''}
                             </span>
                           </div>
                         );
                       }
                       const rawId = typeof (request.vehicleId ?? request.vehicle) === 'string' ? (request.vehicleId ?? request.vehicle) : '';
-                      return <span className="text-sm text-gray-500">{rawId ? `Vehicle ID: ${rawId.slice(0, 6)}…` : 'Unknown Vehicle'}</span>;
+                      return (
+                        <span className="text-sm text-gray-500 truncate whitespace-nowrap block" title={rawId}>
+                          {rawId ? `Vehicle ID: ${rawId.slice(0, 6)}…` : 'Unknown Vehicle'}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                  <td className="table-cell w-40">
+                    {(() => {
+                      const vehicleObj = resolveVehicle(request);
+                      const plate = vehicleObj?.plateNumber;
+                      return plate ? (
+                        <span
+                          className="inline-flex items-center rounded-md bg-gray-100 text-gray-700 px-2 py-0.5 text-sm font-medium whitespace-nowrap truncate max-w-[150px]"
+                          title={plate}
+                        >
+                          {plate}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">—</span>
+                      );
                     })()}
                   </td>
                   <td className="table-cell">
-                    <div className="text-sm text-gray-900">
-                      <div className="capitalize">{request.fuelType}</div>
-                      <div className="text-gray-500">
-                        {request.quantity}L at ${request.cost || 0}
-                      </div>
+                    <span className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-xs font-medium capitalize">
+                      {request.fuelType || '—'}
+                    </span>
+                  </td>
+                  <td className="table-cell">
+                    <div className="text-sm text-gray-900 font-medium">{request.quantity ?? '-'} L</div>
+                  </td>
+                  <td className="table-cell">
+                    {typeof request.pricePerLitre === 'number' ? (
+                      <span className="inline-flex items-center rounded-md bg-cyan-50 text-cyan-700 px-2 py-0.5 text-sm font-medium">
+                        ${request.pricePerLitre.toFixed(2)}/L
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="table-cell">
+                    {typeof request.cost === 'number' ? (
+                      <span className="inline-flex items-center rounded-md bg-emerald-50 text-emerald-700 px-2 py-0.5 text-sm font-semibold">
+                        ${request.cost.toFixed(2)}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="table-cell">
+                    {typeof request.currentKm === 'number' ? (
+                      <span className="inline-flex items-center rounded-md bg-indigo-50 text-indigo-700 px-2 py-0.5 text-sm font-semibold">
+                        {request.currentKm.toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="table-cell">
+                    {request.purpose ? (
+                      <span
+                        className="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-3 py-1 text-xs font-medium max-w-[280px] truncate"
+                        title={request.purpose}
+                      >
+                        {request.purpose}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="table-cell w-48">
+                    <div className="min-w-0">
+                      <span
+                        className="text-sm text-gray-900 truncate max-w-[180px] block whitespace-nowrap"
+                        title={getUserDisplay(request.requestedBy)}
+                      >
+                        {getUserDisplay(request.requestedBy)}
+                      </span>
                     </div>
                   </td>
-                  <td className="table-cell">
-                    <div className="text-sm text-gray-900">{request.currentKm}</div>
-                    <div className="text-xs text-gray-500 truncate max-w-[200px]" title={request.purpose}>{request.purpose}</div>
-                  </td>
-                  <td className="table-cell">
-                    <div className="text-sm text-gray-900">{getUserDisplay(request.requestedBy)}</div>
-                  </td>
-                  <td className="table-cell">
+                  <td className="table-cell w-56">
                     <div className="text-sm text-gray-900">Approved: {request.status === 'approved' && request.issuedDate ? new Date(request.issuedDate).toLocaleDateString() : '—'}</div>
-                    <div className="text-sm text-gray-500">By: {getUserDisplay(request.approvedBy)}</div>
-                    
+                    <div className="text-sm text-gray-500 flex items-center gap-1 min-w-0">
+                      <span>By:</span>
+                      <span className="flex-1 min-w-0 truncate whitespace-nowrap" title={getUserDisplay(request.approvedBy)}>
+                        {getUserDisplay(request.approvedBy)}
+                      </span>
+                    </div>
                   </td>
                   <td className="table-cell">
                     <span className={`status-badge ${getStatusBadgeColor(request.status)}`}>
@@ -495,7 +573,12 @@ const FuelPage = () => {
                       <input
                         type="number"
                         value={formData.quantity}
-                        onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                        onChange={(e) => {
+                          const quantity = e.target.value;
+                          const pricePerLitre = formData.pricePerLitre;
+                          const cost = pricePerLitre !== '' && quantity !== '' ? (Number(pricePerLitre) * Number(quantity)).toFixed(2) : '';
+                          setFormData({...formData, quantity, cost});
+                        }}
                         className="input-field mt-1"
                         placeholder="0"
                         min="0"
@@ -531,18 +614,37 @@ const FuelPage = () => {
                     </div>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Cost ($)</label>
-                    <input
-                      type="number"
-                      value={formData.cost}
-                      onChange={(e) => setFormData({...formData, cost: e.target.value})}
-                      className="input-field mt-1"
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                      required
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Price per Litre ($)</label>
+                      <input
+                        type="number"
+                        value={formData.pricePerLitre}
+                        onChange={(e) => {
+                          const pricePerLitre = e.target.value;
+                          const quantity = formData.quantity;
+                          const cost = pricePerLitre !== '' && quantity !== '' ? (Number(pricePerLitre) * Number(quantity)).toFixed(2) : '';
+                          setFormData({...formData, pricePerLitre, cost});
+                        }}
+                        className="input-field mt-1"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Total Cost ($)</label>
+                      <input
+                        type="number"
+                        value={formData.cost}
+                        onChange={(e) => setFormData({...formData, cost: e.target.value})}
+                        className="input-field mt-1"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        readOnly={formData.pricePerLitre !== ''}
+                      />
+                    </div>
                   </div>
                   
                   <div>

@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 //@access private (driver, manager, admin)
 const createFuelRequest = async (req, res) => {
     try {
-        const { vehicleId, fuelType, quantity, currentKm, purpose } = req.body;
+    const { vehicleId, fuelType, quantity, currentKm, purpose, pricePerLitre, cost } = req.body;
 
         if (!vehicleId || !fuelType || quantity === undefined || currentKm === undefined || !purpose) {
             return res.status(400).json({ message: 'vehicleId, fuelType, quantity, currentKm, and purpose are required' });
@@ -39,7 +39,10 @@ const createFuelRequest = async (req, res) => {
             fuelType,
             quantity,
             currentKm,
-            purpose
+            purpose,
+            pricePerLitre: pricePerLitre ?? null,
+            // Allow passing cost directly (e.g., when approving) but pre-save hook will overwrite if pricePerLitre present
+            cost: cost ?? undefined
         });
 
         await fuelRequest.save();
@@ -123,12 +126,12 @@ const updateFuelRequest = async (req, res) => {
             return res.status(404).json({ message: 'Fuel request not found' });
         }
 
-        const isAdminOrManager = req.user.role === 'admin' || req.user.role === 'manager';
+    const isAdminOrManager = req.user.role === 'admin' || req.user.role === 'manager';
         const isOwner = String(fuelRequest.requestedBy) === String(req.user.id);
 
         // If a status change is requested, only admin/manager can do it
         if (Object.prototype.hasOwnProperty.call(req.body, 'status')) {
-            const { status, cost } = req.body;
+            const { status, cost, pricePerLitre } = req.body;
 
             if (!isAdminOrManager) {
                 return res.status(403).json({ message: 'Only managers/admins can change status' });
@@ -142,7 +145,10 @@ const updateFuelRequest = async (req, res) => {
                 fuelRequest.status = 'approved';
                 fuelRequest.approvedBy = req.user.id;
                 fuelRequest.issuedDate = new Date();
-                if (cost !== undefined) fuelRequest.cost = cost;
+                if (typeof pricePerLitre === 'number') {
+                    fuelRequest.pricePerLitre = pricePerLitre;
+                }
+                if (cost !== undefined) fuelRequest.cost = cost; // fallback if no pricePerLitre
             } else if (status === 'rejected') {
                 fuelRequest.status = 'rejected';
                 fuelRequest.approvedBy = req.user.id;
@@ -170,7 +176,7 @@ const updateFuelRequest = async (req, res) => {
             return res.status(400).json({ message: `Only pending requests can be edited.` });
         }
 
-        const allowed = ['vehicleId', 'fuelType', 'quantity', 'currentKm', 'purpose', 'cost'];
+        const allowed = ['vehicleId', 'fuelType', 'quantity', 'currentKm', 'purpose', 'pricePerLitre', 'cost'];
         const updates = {};
         for (const key of allowed) {
             if (Object.prototype.hasOwnProperty.call(req.body, key)) {
@@ -193,7 +199,7 @@ const updateFuelRequest = async (req, res) => {
         }
 
         // Apply updates
-        Object.assign(fuelRequest, updates);
+    Object.assign(fuelRequest, updates);
         await fuelRequest.save();
 
         // Also update vehicle.currentKm if provided

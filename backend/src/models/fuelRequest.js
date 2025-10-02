@@ -25,6 +25,11 @@ const fuelRequestSchema = new mongoose.Schema ({
         type: Number,
         required: true
     },
+    // Price per litre to be used to calculate the total cost
+    pricePerLitre: {
+        type: Number,
+        default: null
+    },
     currentKm: {
         type: Number,
         required: true
@@ -53,6 +58,16 @@ const fuelRequestSchema = new mongoose.Schema ({
         type: Date,
     }
 })
+
+// Auto-calculate cost when quantity and pricePerLitre are provided
+fuelRequestSchema.pre('save', function(next) {
+    if (typeof this.quantity === 'number' && typeof this.pricePerLitre === 'number') {
+        const raw = this.quantity * this.pricePerLitre;
+        // round to 2 decimals
+        this.cost = Math.round(raw * 100) / 100;
+    }
+    next();
+});
 
 const FuelRequest = mongoose.model("FuelRequest", fuelRequestSchema);
 module.exports = FuelRequest;
