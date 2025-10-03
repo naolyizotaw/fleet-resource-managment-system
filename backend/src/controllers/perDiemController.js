@@ -10,28 +10,41 @@ const mongoose = require('mongoose');
 
 const createPerDiemRequest = async (req, res) => {
     try {
-        const { vehicleId, purpose, destination, startDate, endDate, numberOfDays } = req.body;
+        const { vehicleId: providedVehicleId, driverId: providedDriverId, purpose, destination, startDate, endDate, numberOfDays } = req.body;
 
-        if ( !vehicleId || !purpose || !destination || !startDate || !endDate || !numberOfDays) {
-            return res.status(400).json({ message: 'vehicleId, purpose, destination, startDate, endDate, and numberOfDays are required' });
+        if (!purpose || !destination || !startDate || !endDate || !numberOfDays) {
+            return res.status(400).json({ message: 'purpose, destination, startDate, endDate, and numberOfDays are required' });
         }
 
-        if (!mongoose.Types.ObjectId.isValid(vehicleId)) {
-            return res.status(400).json({ message: 'Invalid vehicle ID format' });
+        // Determine the target driver: provided by body or default to current user
+        const targetDriverId = providedDriverId || req.user.id;
+        if (!mongoose.Types.ObjectId.isValid(targetDriverId)) {
+            return res.status(400).json({ message: 'Invalid driver ID format' });
         }
 
-        const vehicle = await Vehicle.findById(vehicleId);
-        if (!vehicle) {
-            return res.status(404).json({ message: 'Vehicle not found' });
-        }
-
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(targetDriverId);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        // Resolve vehicle: use provided vehicle if valid, otherwise attempt to find assigned vehicle for the driver
+        let vehicleId = null;
+        if (providedVehicleId) {
+            if (!mongoose.Types.ObjectId.isValid(providedVehicleId)) {
+                return res.status(400).json({ message: 'Invalid vehicle ID format' });
+            }
+            const vehicle = await Vehicle.findById(providedVehicleId);
+            if (!vehicle) {
+                return res.status(404).json({ message: 'Vehicle not found' });
+            }
+            vehicleId = vehicle._id;
+        } else {
+            const assigned = await Vehicle.findOne({ assignedDriver: targetDriverId }).select('_id');
+            vehicleId = assigned ? assigned._id : null; // optional per model
+        }
+
         const existingRequest = await PerDiemRequest.findOne({
-            driverId: user.id,
+            driverId: targetDriverId,
             status: 'pending'
         });
         if (existingRequest) {
@@ -43,8 +56,8 @@ const createPerDiemRequest = async (req, res) => {
         }
 
         const perDiemRequest = new PerDiemRequest({
-            vehicleId,
-            driverId: req.user.id,
+            vehicleId: vehicleId,
+            driverId: targetDriverId,
             requestedBy: req.user.id,
             purpose,
             destination,

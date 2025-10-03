@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { perDiemAPI, vehiclesAPI } from '../services/api';
+import { perDiemAPI, vehiclesAPI, usersAPI } from '../services/api';
 import { Receipt, Plus, Search, Filter, Truck, AlertCircle, CheckCircle, Clock, Calendar, Edit, Trash2, ThumbsUp, ThumbsDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -8,6 +8,7 @@ const PerDiem = () => {
   const { user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+  const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -18,6 +19,7 @@ const PerDiem = () => {
 
   const [formData, setFormData] = useState({
   vehicleId: '',
+  driverId: '',
   purpose: '',
   destination: '',
   startDate: '',
@@ -48,9 +50,18 @@ const PerDiem = () => {
       const vehiclesRes = (user.role === 'admin' || user.role === 'manager')
         ? await vehiclesAPI.getAll()
         : await vehiclesAPI.getMine();
+      // Load drivers for selection
+      let driversRes = [];
+      try {
+        const res = await usersAPI.getDrivers();
+        driversRes = res.data || [];
+      } catch (e) {
+        driversRes = [];
+      }
 
       setRequests(perDiemData);
-      setVehicles(vehiclesRes.data);
+  setVehicles(vehiclesRes.data);
+  setDrivers(driversRes);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to fetch data');
@@ -106,12 +117,13 @@ const PerDiem = () => {
   const handleEdit = (request) => {
     setEditingRequest(request);
     setFormData({
-  vehicleId: (typeof request.vehicleId === 'object' ? request.vehicleId?._id : request.vehicleId) || '',
-  purpose: request.purpose || '',
-  destination: request.destination || '',
-  startDate: request.startDate ? new Date(request.startDate).toISOString().split('T')[0] : '',
-  endDate: request.endDate ? new Date(request.endDate).toISOString().split('T')[0] : '',
-  numberOfDays: request.numberOfDays ?? 1,
+      vehicleId: (typeof request.vehicleId === 'object' ? request.vehicleId?._id : request.vehicleId) || '',
+      driverId: (typeof request.driverId === 'object' ? request.driverId?._id : request.driverId) || '',
+      purpose: request.purpose || '',
+      destination: request.destination || '',
+      startDate: request.startDate ? new Date(request.startDate).toISOString().split('T')[0] : '',
+      endDate: request.endDate ? new Date(request.endDate).toISOString().split('T')[0] : '',
+      numberOfDays: request.numberOfDays ?? 1,
     });
     setShowModal(true);
   };
@@ -145,6 +157,7 @@ const PerDiem = () => {
   const resetForm = () => {
     setFormData({
       vehicleId: '',
+      driverId: '',
       purpose: '',
       destination: '',
       startDate: '',
@@ -515,20 +528,21 @@ const PerDiem = () => {
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Vehicle</label>
+                    <label className="block text-sm font-medium text-gray-700">Driver</label>
                     <select
-                      value={formData.vehicleId}
-                      onChange={(e) => setFormData({...formData, vehicleId: e.target.value})}
+                      value={formData.driverId}
+                      onChange={(e) => setFormData({...formData, driverId: e.target.value})}
                       className="input-field mt-1"
                       required
                     >
-                      <option value="">Select Vehicle</option>
-                {vehicles.map(vehicle => (
-                        <option key={vehicle._id} value={vehicle._id}>
-                  {vehicle.year} {vehicle.manufacturer} {vehicle.model} - {vehicle.licensePlate || vehicle.plateNumber || 'No Plate'}
+                      <option value="">Select Driver</option>
+                      {drivers.map(d => (
+                        <option key={d._id} value={d._id}>
+                          {d.fullName || d.username || d.email}
                         </option>
                       ))}
                     </select>
+                    <p className="mt-1 text-xs text-gray-500">Vehicle will be linked automatically if the driver has an assigned vehicle.</p>
                   </div>
                   
                   <div>

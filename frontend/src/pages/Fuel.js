@@ -425,7 +425,7 @@ const FuelPage = () => {
                   <td className="table-cell">
                     {request.purpose ? (
                       <span
-                        className="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-3 py-1 text-xs font-medium max-w-[280px] truncate"
+                        className="text-sm text-gray-900 block truncate max-w-[280px]"
                         title={request.purpose}
                       >
                         {request.purpose}
