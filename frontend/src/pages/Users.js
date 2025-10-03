@@ -26,6 +26,7 @@ const Users = () => {
   department: '',
   status: 'active',
   });
+  const [alert, setAlert] = useState({ type: '', message: '' });
 
   useEffect(() => {
     fetchUsers();
@@ -38,7 +39,8 @@ const Users = () => {
       setUsers(response.data);
     } catch (error) {
       console.error('Error fetching users:', error);
-      toast.error('Failed to fetch users');
+      setAlert({ type: 'error', message: 'Failed to fetch users' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     } finally {
       setLoading(false);
     }
@@ -48,7 +50,8 @@ const Users = () => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
+      setAlert({ type: 'error', message: 'Passwords do not match' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
       return;
     }
 
@@ -60,7 +63,8 @@ const Users = () => {
         
         await usersAPI.update(editingUser._id, updateData);
         await fetchUsers();
-        toast.success('User updated successfully');
+        setAlert({ type: 'success', message: 'User updated successfully' });
+        setTimeout(() => setAlert({ type: '', message: '' }), 5000);
       } else {
         // Use the protected admin register endpoint to create users
         await authAPI.register({
@@ -73,7 +77,8 @@ const Users = () => {
           department: formData.department,
           status: formData.status,
         });
-        toast.success('User created successfully');
+        setAlert({ type: 'success', message: 'User created successfully' });
+        setTimeout(() => setAlert({ type: '', message: '' }), 5000);
         await fetchUsers(); // Refetch since register returns only a message
       }
       
@@ -82,7 +87,8 @@ const Users = () => {
       resetForm();
     } catch (error) {
       console.error('Error saving user:', error);
-      toast.error(error.response?.data?.message || 'Failed to save user');
+      setAlert({ type: 'error', message: error.response?.data?.message || 'Failed to save user' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     }
   };
 
@@ -122,12 +128,14 @@ const Users = () => {
     try {
       await usersAPI.delete(userToDelete._id);
       setUsers(users.filter(u => u._id !== userToDelete._id));
-      toast.success('User deleted successfully');
+      setAlert({ type: 'success', message: 'User deleted successfully' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
       setShowDeleteModal(false);
       setUserToDelete(null);
     } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
+      setAlert({ type: 'error', message: 'Failed to delete user' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     }
   };
 
@@ -194,12 +202,14 @@ const Users = () => {
 
     try {
       await usersAPI.update(id, { status: newStatus });
-      toast.success('Status updated');
+      setAlert({ type: 'success', message: 'Status updated' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     } catch (err) {
       console.error('Failed to update status', err);
       // rollback
       setUsers(prevUsers);
-      toast.error(err.response?.data?.message || 'Failed to update status');
+      setAlert({ type: 'error', message: err.response?.data?.message || 'Failed to update status' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     }
   };
 
@@ -207,12 +217,14 @@ const Users = () => {
     try {
       await navigator.clipboard.writeText(text || '');
   setCopiedUsername(text);
-  toast.success('Username copied');
+    setAlert({ type: 'success', message: 'Username copied' });
+    setTimeout(() => setAlert({ type: '', message: '' }), 2000);
   // clear visual feedback after 2s
   setTimeout(() => setCopiedUsername(null), 2000);
     } catch (err) {
       console.error('Copy failed', err);
-      toast.error('Failed to copy');
+        setAlert({ type: 'error', message: 'Failed to copy' });
+        setTimeout(() => setAlert({ type: '', message: '' }), 2000);
     }
   };
 
@@ -233,13 +245,15 @@ const Users = () => {
   const handleSendEmail = (e) => {
     e?.preventDefault?.();
     if (!emailModalUser || !emailModalUser.email) {
-      toast.error('No recipient email');
+      setAlert({ type: 'error', message: 'No recipient email' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 3000);
       return;
     }
     const mailto = `mailto:${emailModalUser.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
     // open user's mail client
     window.location.href = mailto;
-    toast.success('Opening mail client');
+    setAlert({ type: 'success', message: 'Opening mail client' });
+    setTimeout(() => setAlert({ type: '', message: '' }), 3000);
     closeEmailModal();
   };
 
@@ -264,6 +278,14 @@ const Users = () => {
 
   return (
     <div className="space-y-6">
+      {alert.message && (
+        <div className={`mb-4 p-3 rounded-md ${alert.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`} role="alert">
+          <div className="flex justify-between items-center">
+            <div>{alert.message}</div>
+            <button onClick={() => setAlert({ type: '', message: '' })} className="ml-4 text-sm underline">Dismiss</button>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>

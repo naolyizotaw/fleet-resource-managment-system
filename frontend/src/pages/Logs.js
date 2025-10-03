@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { logsAPI, vehiclesAPI, usersAPI } from '../services/api';
 import { Truck, Edit, Trash2, Search, Plus, Filter } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 const DeleteConfirmationModal = ({ onConfirm, onCancel }) => {
   return (
@@ -38,6 +37,7 @@ const Logs = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [vehicleFilter, setVehicleFilter] = useState('all');
   const [logToDelete, setLogToDelete] = useState(null);
+  const [alert, setAlert] = useState({ type: '', message: '' });
 
   const fetchData = useCallback(async () => {
     try {
@@ -61,7 +61,7 @@ const Logs = () => {
       setDrivers(Array.isArray(fetchedDrivers) ? fetchedDrivers : []);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to load logs');
+      setAlert({ type: 'error', message: 'Failed to load logs' });
     } finally {
       setLoading(false);
     }
@@ -143,9 +143,9 @@ const Logs = () => {
         remarks: editingLog.remarks || '',
       };
 
-      // client-side validation to give quicker feedback
-      if (!payload.vehicleId) return toast.error('Please select a vehicle');
-      if (payload.endKm === 0 || isNaN(payload.endKm)) return toast.error('Please provide a valid End KM');
+  // client-side validation to give quicker feedback
+  if (!payload.vehicleId) { setAlert({ type: 'error', message: 'Please select a vehicle' }); return; }
+  if (payload.endKm === 0 || isNaN(payload.endKm)) { setAlert({ type: 'error', message: 'Please provide a valid End KM' }); return; }
 
       // Prevent creating more than one log per vehicle per day (client-side check)
       const normalizeDateStr = (d) => {
@@ -165,18 +165,20 @@ const Logs = () => {
         return sameVehicle && sameDay && differentRecord;
       });
       if (!editingLog._id && conflict) {
-        return toast.error('A log for this vehicle already exists for the selected date');
+        setAlert({ type: 'error', message: 'A log for this vehicle already exists for the selected date' });
+        return;
       }
       if (editingLog._id && conflict) {
-        return toast.error('Another log for this vehicle already exists for the selected date');
+        setAlert({ type: 'error', message: 'Another log for this vehicle already exists for the selected date' });
+        return;
       }
 
       if (editingLog._id) {
         await logsAPI.update(editingLog._id, payload);
-        toast.success('Log updated');
+        setAlert({ type: 'success', message: 'Log updated' });
       } else {
         await logsAPI.create(payload);
-        toast.success('Log created');
+        setAlert({ type: 'success', message: 'Log created' });
       }
 
       fetchData();
@@ -184,18 +186,18 @@ const Logs = () => {
     } catch (err) {
       console.error('Save log error:', err);
       const msg = err?.response?.data?.message || err.message || 'Failed to save log';
-      toast.error(msg);
+      setAlert({ type: 'error', message: msg });
     }
   };
 
   const handleDelete = async (id) => {
     try {
       await logsAPI.delete(id);
-      toast.success('Log deleted');
+      setAlert({ type: 'success', message: 'Log deleted' });
       fetchData();
     } catch (err) {
       console.error(err);
-      toast.error('Failed to delete log');
+      setAlert({ type: 'error', message: 'Failed to delete log' });
     } finally {
       setLogToDelete(null);
     }
@@ -205,6 +207,14 @@ const Logs = () => {
 
   return (
     <div className="space-y-6">
+      {alert.message && (
+        <div className={`mb-4 p-3 rounded-md ${alert.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`} role="alert">
+          <div className="flex justify-between items-center">
+            <div>{alert.message}</div>
+            <button onClick={() => setAlert({ type: '', message: '' })} className="ml-4 text-sm underline">Dismiss</button>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Trip Logs</h1>

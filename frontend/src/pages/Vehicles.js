@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { /* useAuth */ } from '../contexts/AuthContext';
 import { vehiclesAPI, usersAPI } from '../services/api';
 import { Truck, Plus, Trash2, Edit, Search, Filter, User } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 const Vehicles = () => {
   // removed unused user from useAuth to fix eslint no-unused-vars
@@ -32,6 +31,7 @@ const Vehicles = () => {
   };
 
   const [formData, setFormData] = useState(initialFormData);
+  const [alert, setAlert] = useState({ type: '', message: '' });
 
   useEffect(() => {
     fetchData();
@@ -48,7 +48,8 @@ const Vehicles = () => {
       setUsers(usersRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to fetch data');
+      setAlert({ type: 'error', message: 'Failed to fetch data' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     } finally {
       setLoading(false);
     }
@@ -66,7 +67,8 @@ const Vehicles = () => {
       };
       if (editingVehicle) {
         await vehiclesAPI.update(editingVehicle._id, payload);
-        toast.success('Vehicle updated successfully');
+        setAlert({ type: 'success', message: 'Vehicle updated successfully' });
+        setTimeout(() => setAlert({ type: '', message: '' }), 5000);
         // clear any previous error for this vehicle
         setVehicleErrors(prev => {
           const copy = { ...prev };
@@ -75,7 +77,8 @@ const Vehicles = () => {
         });
       } else {
         await vehiclesAPI.create(payload);
-        toast.success('Vehicle created successfully');
+        setAlert({ type: 'success', message: 'Vehicle created successfully' });
+        setTimeout(() => setAlert({ type: '', message: '' }), 5000);
       }
       setFormError('');
       fetchData(); // Refetch data to show changes
@@ -88,8 +91,9 @@ const Vehicles = () => {
       if (editingVehicle) {
         setVehicleErrors(prev => ({ ...prev, [editingVehicle._id]: message }));
       }
-      // also show toast for visibility
-      toast.error(message);
+      // also show inline alert
+      setAlert({ type: 'error', message });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     }
   };
 
@@ -121,7 +125,8 @@ const Vehicles = () => {
     if (!vehicleToDelete) return;
     try {
       await vehiclesAPI.delete(vehicleToDelete._id);
-      toast.success('Vehicle deleted successfully');
+      setAlert({ type: 'success', message: 'Vehicle deleted successfully' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
   fetchData(); // Refetch data
   setFormError('');
       setShowDeleteModal(false);
@@ -131,7 +136,8 @@ const Vehicles = () => {
   const message = error.response?.data?.message || 'Failed to delete vehicle';
   // attach to the row for visibility
   setVehicleErrors(prev => ({ ...prev, [vehicleToDelete._id]: message }));
-  toast.error(message);
+  setAlert({ type: 'error', message });
+  setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     }
   };
 
@@ -177,6 +183,14 @@ const Vehicles = () => {
 
   return (
     <div className="space-y-6">
+      {alert.message && (
+        <div className={`mb-4 p-3 rounded-md ${alert.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`} role="alert">
+          <div className="flex justify-between items-center">
+            <div>{alert.message}</div>
+            <button onClick={() => setAlert({ type: '', message: '' })} className="ml-4 text-sm underline">Dismiss</button>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Vehicles Management</h1>

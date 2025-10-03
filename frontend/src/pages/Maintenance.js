@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { maintenanceAPI, vehiclesAPI, usersAPI } from '../services/api';
 import { Wrench, Plus, Search, Filter, Truck, Edit, Trash2, AlertCircle, CheckCircle, Clock } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 const Maintenance = () => {
   const { user } = useAuth();
@@ -34,6 +33,7 @@ const Maintenance = () => {
     estimatedCost: '',
     notes: '',
   });
+  const [alert, setAlert] = useState({ type: '', message: '' });
 
   const fetchData = useCallback(async () => {
     try {
@@ -79,7 +79,8 @@ const Maintenance = () => {
       setUsersMap(map);
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to fetch data');
+      setAlert({ type: 'error', message: 'Failed to fetch data' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     } finally {
       setLoading(false);
     }
@@ -153,7 +154,8 @@ const Maintenance = () => {
         console.log('Update response:', updateRes);
         const updated = updateRes.data?.request || updateRes.data;
         setRequests(requests.map(r => r._id === editingRequest._id ? updated : r));
-        toast.success('Maintenance request updated successfully');
+        setAlert({ type: 'success', message: 'Maintenance request updated successfully' });
+        setTimeout(() => setAlert({ type: '', message: '' }), 5000);
       } else {
         console.log('Creating maintenance payload:', payload);
   const response = await maintenanceAPI.create(payload);
@@ -162,7 +164,8 @@ const Maintenance = () => {
   const created = response.data?.request || response.data;
   setRequests([...requests, created]);
   setConflictInfo(null);
-  toast.success('Maintenance request created successfully');
+  setAlert({ type: 'success', message: 'Maintenance request created successfully' });
+  setTimeout(() => setAlert({ type: '', message: '' }), 5000);
       }
       
       setShowModal(false);
@@ -170,13 +173,14 @@ const Maintenance = () => {
       resetForm();
     } catch (error) {
   console.error('Error saving maintenance request:', error);
-  const message = error?.response?.data?.message || error?.message || 'Failed to save maintenance request';
+      const message = error?.response?.data?.message || error?.message || 'Failed to save maintenance request';
       // If conflict (existing open request), surface details and allow opening it
       if (error?.response?.status === 409) {
         const data = error.response.data || {};
         setConflictInfo({ requestId: data.requestId, status: data.status, message: data.message });
       }
-      toast.error(message);
+      setAlert({ type: 'error', message });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     }
   };
 
@@ -198,10 +202,12 @@ const Maintenance = () => {
       const response = await maintenanceAPI.update(requestId, { status: newStatus });
       const updated = response.data?.request || response.data;
       setRequests(requests.map(r => r._id === requestId ? updated : r));
-      toast.success('Status updated successfully');
+      setAlert({ type: 'success', message: 'Status updated successfully' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     } catch (error) {
       console.error('Error updating status:', error);
-      toast.error('Failed to update status');
+      setAlert({ type: 'error', message: 'Failed to update status' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     }
   };
 
@@ -215,7 +221,8 @@ const Maintenance = () => {
     if (!requestToComplete) return;
     const parsed = completeForm.cost !== '' ? Number(completeForm.cost) : undefined;
     if (parsed === undefined || Number.isNaN(parsed) || parsed < 0) {
-      toast.error('Please enter a valid cost (0 or more).');
+      setAlert({ type: 'error', message: 'Please enter a valid cost (0 or more).' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 3000);
       return;
     }
     try {
@@ -225,11 +232,13 @@ const Maintenance = () => {
       setShowCompleteModal(false);
       setRequestToComplete(null);
       setCompleteForm({ cost: '', remarks: '' });
-      toast.success('Maintenance marked as completed');
+      setAlert({ type: 'success', message: 'Maintenance marked as completed' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     } catch (err) {
       console.error('Failed to complete request:', err);
       const message = err?.response?.data?.message || err?.message || 'Failed to complete request';
-      toast.error(message);
+      setAlert({ type: 'error', message });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     }
   };
 
@@ -241,13 +250,15 @@ const Maintenance = () => {
       setRequests(requests.filter(r => r._id !== requestToDelete._id));
       console.log('Delete response:', res);
       const message = res?.data?.message || 'Request deleted';
-      toast.success(message);
+      setAlert({ type: 'success', message });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
       setShowDeleteModal(false);
       setRequestToDelete(null);
     } catch (err) {
       console.error('Error deleting request:', err);
       const message = err?.response?.data?.message || err?.message || 'Failed to delete request';
-      toast.error(message);
+      setAlert({ type: 'error', message });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     }
   };
 
@@ -278,7 +289,8 @@ const Maintenance = () => {
       setConflictInfo(null);
     } catch (err) {
       console.error('Failed to load existing request:', err);
-      toast.error('Failed to load existing request');
+      setAlert({ type: 'error', message: 'Failed to load existing request' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     }
   };
 
@@ -345,6 +357,14 @@ const Maintenance = () => {
 
   return (
     <div className="space-y-6">
+      {alert.message && (
+        <div className={`mb-4 p-3 rounded-md ${alert.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`} role="alert">
+          <div className="flex justify-between items-center">
+            <div>{alert.message}</div>
+            <button onClick={() => setAlert({ type: '', message: '' })} className="ml-4 text-sm underline">Dismiss</button>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Maintenance Requests</h1>

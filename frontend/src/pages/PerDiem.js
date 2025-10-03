@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { perDiemAPI, vehiclesAPI, usersAPI } from '../services/api';
 import { Receipt, Plus, Search, Filter, Truck, AlertCircle, CheckCircle, Clock, Calendar, Edit, Trash2, ThumbsUp, ThumbsDown } from 'lucide-react';
-import toast from 'react-hot-toast';
+
 
 const PerDiem = () => {
   const { user } = useAuth();
@@ -31,6 +31,7 @@ const PerDiem = () => {
   endDate: '',
   numberOfDays: 1,
   });
+  const [alert, setAlert] = useState({ type: '', message: '' });
 
   const fetchData = React.useCallback(async () => {
     setLoading(true);
@@ -68,8 +69,8 @@ const PerDiem = () => {
   setVehicles(vehiclesRes.data);
   setDrivers(driversRes);
     } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Failed to fetch data');
+  console.error('Error fetching data:', error);
+  setAlert({ type: 'error', message: 'Failed to fetch data' });
     } finally {
       setLoading(false);
     }
@@ -108,12 +109,12 @@ const PerDiem = () => {
       if (editingRequest) {
         const response = await perDiemAPI.update(editingRequest._id, formData);
         setRequests(requests.map(r => r._id === editingRequest._id ? response.data : r));
-        toast.success('Per diem request updated successfully');
+        setAlert({ type: 'success', message: 'Per diem request updated successfully' });
       } else {
         const response = await perDiemAPI.create(formData);
         const created = response.data?.perDiemRequest || response.data; // controller returns { message, perDiemRequest }
         setRequests([...requests, created]);
-        toast.success('Per diem request created successfully');
+        setAlert({ type: 'success', message: 'Per diem request created successfully' });
       }
       
       setShowModal(false);
@@ -133,7 +134,7 @@ const PerDiem = () => {
       } else {
         setFormError(errorMessage);
       }
-      toast.error(errorMessage);
+      setAlert({ type: 'error', message: errorMessage });
     }
   };
 
@@ -155,11 +156,11 @@ const PerDiem = () => {
     try {
   const response = await perDiemAPI.update(requestId, { status: newStatus });
   const updated = response.data;
-  setRequests(requests.map(r => r._id === requestId ? updated : r));
-      toast.success('Status updated successfully');
+      setRequests(requests.map(r => r._id === requestId ? updated : r));
+      setAlert({ type: 'success', message: 'Status updated successfully' });
     } catch (error) {
       console.error('Error updating status:', error);
-      toast.error('Failed to update status');
+      setAlert({ type: 'error', message: 'Failed to update status' });
     }
   };
 
@@ -169,11 +170,11 @@ const PerDiem = () => {
     try {
       await perDiemAPI.delete(requestId);
       setRequests(prev => prev.filter(r => r._id !== requestId));
-      toast.success('Per diem request deleted');
+      setAlert({ type: 'success', message: 'Per diem request deleted' });
     } catch (error) {
       console.error('Error deleting per diem request:', error);
       const msg = error?.response?.data?.message || 'Failed to delete per diem request';
-      toast.error(msg);
+      setAlert({ type: 'error', message: msg });
     }
   };
 
@@ -249,7 +250,7 @@ const PerDiem = () => {
       setConflictInfo(null);
     } catch (error) {
       console.error('Error fetching existing request:', error);
-      toast.error('Failed to load existing request.');
+      setAlert({ type: 'error', message: 'Failed to load existing request.' });
     }
   };
 
@@ -276,6 +277,14 @@ const PerDiem = () => {
 
   return (
     <div className="space-y-6">
+      {alert.message && (
+        <div className={`mb-4 p-3 rounded-md ${alert.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`} role="alert">
+          <div className="flex justify-between items-center">
+            <div>{alert.message}</div>
+            <button onClick={() => setAlert({ type: '', message: '' })} className="ml-4 text-sm underline">Dismiss</button>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Per Diem Requests</h1>

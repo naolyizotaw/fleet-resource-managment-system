@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { fuelAPI, vehiclesAPI } from '../services/api';
 import { Fuel as FuelIcon, Plus, Search, Filter, Truck, AlertCircle, CheckCircle, Clock, Edit, ThumbsUp, ThumbsDown, Trash2 } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 const FuelPage = () => {
   const { user } = useAuth();
@@ -30,6 +29,7 @@ const FuelPage = () => {
     pricePerLitre: '',
     cost: '',
   });
+  const [alert, setAlert] = useState({ type: '', message: '' });
 
   const fetchData = useCallback(async () => {
     try {
@@ -88,7 +88,7 @@ const FuelPage = () => {
       setRequests(requestsData);
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to fetch data');
+      setAlert({ type: 'error', message: 'Failed to fetch data' });
     } finally {
       setLoading(false);
     }
@@ -142,11 +142,11 @@ const FuelPage = () => {
       if (editingRequest) {
         await fuelAPI.update(editingRequest._id, payload);
         await fetchData();
-        toast.success('Fuel request updated successfully');
+        setAlert({ type: 'success', message: 'Fuel request updated successfully' });
       } else {
         await fuelAPI.create(payload);
         await fetchData();
-        toast.success('Fuel request created successfully');
+        setAlert({ type: 'success', message: 'Fuel request created successfully' });
       }
       
       setShowModal(false);
@@ -155,7 +155,7 @@ const FuelPage = () => {
     } catch (error) {
       console.error('Error saving fuel request:', error);
       const msg = error?.response?.data?.message || 'Failed to save fuel request';
-      toast.error(msg);
+      setAlert({ type: 'error', message: msg });
     }
   };
 
@@ -174,13 +174,13 @@ const FuelPage = () => {
   };
 
   const handleStatusUpdate = async (requestId, newStatus) => {
-    try {
+      try {
       await fuelAPI.update(requestId, { status: newStatus });
   await fetchData();
-      toast.success('Status updated successfully');
+      setAlert({ type: 'success', message: 'Status updated successfully' });
     } catch (error) {
       console.error('Error updating status:', error);
-      toast.error('Failed to update status');
+      setAlert({ type: 'error', message: 'Failed to update status' });
     }
   };
 
@@ -194,13 +194,13 @@ const FuelPage = () => {
     try {
       await fuelAPI.delete(requestToDelete._id);
       await fetchData();
-      toast.success('Fuel request deleted');
+      setAlert({ type: 'success', message: 'Fuel request deleted' });
       setShowDeleteModal(false);
       setRequestToDelete(null);
     } catch (error) {
       console.error('Error deleting fuel request:', error);
       const msg = error?.response?.data?.message || 'Failed to delete request';
-      toast.error(msg);
+      setAlert({ type: 'error', message: msg });
     }
   };
 
@@ -290,6 +290,14 @@ const FuelPage = () => {
 
   return (
     <div className="space-y-6">
+      {alert.message && (
+        <div className={`mb-4 p-3 rounded-md ${alert.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`} role="alert">
+          <div className="flex justify-between items-center">
+            <div>{alert.message}</div>
+            <button onClick={() => setAlert({ type: '', message: '' })} className="ml-4 text-sm underline">Dismiss</button>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Fuel Requests</h1>
