@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Truck, 
@@ -8,14 +9,13 @@ import {
   FileText, 
   Users, 
   TrendingUp,
-  AlertCircle,
-  CheckCircle,
-  Clock
+  
 } from 'lucide-react';
 import { maintenanceAPI, fuelAPI, perDiemAPI, logsAPI, vehiclesAPI, usersAPI } from '../services/api';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalVehicles: 0,
     totalUsers: 0,
@@ -101,18 +101,7 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'approved':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'rejected':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
-    }
-  };
+  // status icon inline not used in the redesigned recent list
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -137,6 +126,85 @@ const Dashboard = () => {
         return 'Per Diem';
       default:
         return 'Request';
+    }
+  };
+
+  const typeIcon = (type) => {
+    switch (type) {
+      case 'fuel':
+        return <Fuel className="h-5 w-5 text-purple-600" />;
+      case 'maintenance':
+        return <Wrench className="h-5 w-5 text-yellow-600" />;
+      case 'perdiem':
+        return <Receipt className="h-5 w-5 text-indigo-600" />;
+      default:
+        return <FileText className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  const timeAgo = (date) => {
+    try {
+      const d = typeof date === 'string' ? new Date(date) : date;
+      const diff = Math.max(0, Date.now() - d.getTime());
+      const s = Math.floor(diff / 1000);
+      if (s < 60) return `${s}s ago`;
+      const m = Math.floor(s / 60);
+      if (m < 60) return `${m}m ago`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h}h ago`;
+      const dys = Math.floor(h / 24);
+      if (dys < 7) return `${dys}d ago`;
+      return d.toLocaleDateString();
+    } catch {
+      return '';
+    }
+  };
+
+  const buildLinkWithHighlight = (item) => {
+    try {
+      const t = (item?.type || '').toLowerCase();
+      const base = t === 'fuel' ? '/fuel' : t === 'maintenance' ? '/maintenance' : t === 'perdiem' ? '/perdiem' : '/dashboard';
+      const hasQuery = base.includes('?');
+      return `${base}${hasQuery ? '&' : '?'}highlight=${item._id}`;
+    } catch {
+      return '/dashboard';
+    }
+  };
+
+  const renderDetails = (req) => {
+    try {
+      const t = (req?.type || '').toLowerCase();
+      const vehicle = req.vehicleId && typeof req.vehicleId === 'object' ? req.vehicleId : null;
+      const plate = vehicle?.plateNumber || vehicle?.licensePlate;
+      if (t === 'fuel') {
+        const qty = req.quantity != null ? `${req.quantity}L` : null;
+        const ftype = req.fuelType ? req.fuelType : null;
+        const pieces = [];
+        if (plate) pieces.push(`Plate: ${plate}`);
+        if (qty) pieces.push(`Qty: ${qty}`);
+        if (ftype) pieces.push(`Type: ${ftype}`);
+        if (req.cost != null) pieces.push(`Cost: $${req.cost}`);
+        return pieces.join(' · ');
+      }
+      if (t === 'maintenance') {
+        const parts = [];
+        if (plate) parts.push(`Plate: ${plate}`);
+        if (req.category) parts.push(`Cat: ${req.category}`);
+        if (req.description) parts.push(req.description);
+        return parts.join(' · ');
+      }
+      if (t === 'perdiem') {
+        const parts = [];
+        if (req.destination) parts.push(`Dest: ${req.destination}`);
+        if (req.numberOfDays) parts.push(`${req.numberOfDays} day${req.numberOfDays > 1 ? 's' : ''}`);
+        const sd = req.startDate ? new Date(req.startDate).toLocaleDateString() : null;
+        const ed = req.endDate ? new Date(req.endDate).toLocaleDateString() : null;
+        if (sd || ed) parts.push(`${sd || '—'} - ${ed || '—'}`);
+        return parts.join(' · ');
+      }
+      return '';
+    } catch {
+      return '';
     }
   };
 
@@ -261,27 +329,30 @@ const Dashboard = () => {
         ) : (
           <div className="space-y-3">
             {recentRequests.map((request) => (
-              <div key={`${request.type}-${request._id}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <button
+                key={`${request.type}-${request._id}`}
+                onClick={() => navigate(buildLinkWithHighlight(request))}
+                className="w-full text-left flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+              >
                 <div className="flex items-center space-x-3">
-                  {getStatusIcon(request.status)}
+                  {typeIcon(request.type)}
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-gray-900 flex items-center gap-2">
                       {getRequestTypeLabel(request.type)} Request
-                    </p>
-                    <div className="flex items-center space-x-2">
-                      <p className="text-xs text-gray-500">
-                        {new Date(request.createdAt).toLocaleDateString()}
-                      </p>
-                      <span className={`inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ${getPriorityBadgeColor(request.priority)}`}>
-                        {request.priority || 'N/A'}
+                      <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full ${getStatusColor(request.status)}`}>
+                        {request.status}
                       </span>
+                    </p>
+                    <div className="text-xs text-gray-600 mt-0.5">{renderDetails(request)}</div>
+                    <div className="text-[11px] text-gray-400 mt-0.5">
+                      {timeAgo(request.createdAt)} · {new Date(request.createdAt).toLocaleString()}
                     </div>
                   </div>
                 </div>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(request.status)}`}>
-                  {request.status}
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityBadgeColor(request.priority)}`}>
+                  {request.priority || 'N/A'}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         )}

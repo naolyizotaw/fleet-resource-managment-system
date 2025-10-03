@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { fuelAPI, vehiclesAPI } from '../services/api';
 import { Fuel as FuelIcon, Plus, Search, Filter, Truck, AlertCircle, CheckCircle, Clock, Edit, ThumbsUp, ThumbsDown, Trash2 } from 'lucide-react';
@@ -15,6 +16,10 @@ const FuelPage = () => {
   const [editingRequest, setEditingRequest] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState(null);
+  const [highlightedId, setHighlightedId] = useState(null);
+  const rowRefs = useRef({});
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     vehicleId: '',
@@ -92,6 +97,27 @@ const FuelPage = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Handle deep link highlighting via ?highlight=<id>
+  useEffect(() => {
+    if (loading) return;
+    const params = new URLSearchParams(location.search);
+    const targetId = params.get('highlight');
+    if (!targetId) return;
+    // Wait a tick to ensure refs populated
+    const el = rowRefs.current[targetId];
+    if (el) {
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+      setHighlightedId(targetId);
+      // Clear highlight after a few seconds
+      const t = setTimeout(() => setHighlightedId(null), 4500);
+      // Remove the query param from the URL
+      const newParams = new URLSearchParams(location.search);
+      newParams.delete('highlight');
+      navigate({ pathname: location.pathname, search: newParams.toString() ? `?${newParams.toString()}` : '' }, { replace: true });
+      return () => clearTimeout(t);
+    }
+  }, [loading, requests, location.search, location.pathname, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -332,7 +358,11 @@ const FuelPage = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredRequests.map((request) => (
-                <tr key={request._id} className="hover:bg-gray-50">
+                <tr
+                  key={request._id}
+                  ref={(el) => { if (el) rowRefs.current[request._id] = el; }}
+                  className={`hover:bg-gray-50 ${highlightedId === request._id ? 'bg-yellow-50 ring-2 ring-amber-400' : ''}`}
+                >
                   <td className="table-cell">
                     <div className="flex items-center">
                       {getStatusIcon(request.status)}

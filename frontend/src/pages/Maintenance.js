@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { maintenanceAPI, vehiclesAPI, usersAPI } from '../services/api';
 import { Wrench, Plus, Search, Filter, Truck, Edit, Trash2, AlertCircle, CheckCircle, Clock } from 'lucide-react';
@@ -20,6 +21,10 @@ const Maintenance = () => {
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [requestToComplete, setRequestToComplete] = useState(null);
   const [completeForm, setCompleteForm] = useState({ cost: '', remarks: '' });
+  const [highlightedId, setHighlightedId] = useState(null);
+  const rowRefs = useRef({});
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     vehicleId: '',
@@ -83,6 +88,24 @@ const Maintenance = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Deep-link highlight handling via ?highlight=<id>
+  useEffect(() => {
+    if (loading) return;
+    const params = new URLSearchParams(location.search);
+    const targetId = params.get('highlight');
+    if (!targetId) return;
+    const el = rowRefs.current[targetId];
+    if (el) {
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+      setHighlightedId(targetId);
+      const t = setTimeout(() => setHighlightedId(null), 4500);
+      const newParams = new URLSearchParams(location.search);
+      newParams.delete('highlight');
+      navigate({ pathname: location.pathname, search: newParams.toString() ? `?${newParams.toString()}` : '' }, { replace: true });
+      return () => clearTimeout(t);
+    }
+  }, [loading, requests, location.search, location.pathname, navigate]);
 
   const getUserDisplay = (u, fallbackId) => {
     // Prefer populated object if available (driver or driverId could be populated)
@@ -417,7 +440,11 @@ const Maintenance = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredRequests.map((request) => (
-                <tr key={request._id} className="hover:bg-gray-50">
+                <tr
+                  key={request._id}
+                  ref={(el) => { if (el) rowRefs.current[request._id] = el; }}
+                  className={`hover:bg-gray-50 ${highlightedId === request._id ? 'bg-yellow-50 ring-2 ring-amber-400' : ''}`}
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-start">
                       <div className="w-5 flex-shrink-0 flex items-center justify-center">

@@ -1,6 +1,7 @@
 const Vehicle = require('../models/vehicleModel');
 const User = require('../models/userModel');
 const PerDiemRequest = require('../models/perDiemRequest');
+const Notification = require('../models/notification');
 const mongoose = require('mongoose');
 
 
@@ -67,6 +68,61 @@ const createPerDiemRequest = async (req, res) => {
         });
 
         await perDiemRequest.save();
+
+        try {
+            const reqDoc = await User.findById(req.user.id).select('fullName username email');
+            const requestedByName = reqDoc?.fullName || reqDoc?.username || reqDoc?.email;
+            const plateDoc = vehicleId ? await Vehicle.findById(vehicleId).select('plateNumber') : null;
+            const vehiclePlate = plateDoc?.plateNumber;
+            await Notification.create({
+                user: req.user.id,
+                type: 'perDiem',
+                entityId: perDiemRequest._id,
+                title: 'Per diem request submitted',
+                message: `Per diem request submitted for ${numberOfDays} day(s) to ${destination}.`,
+                                actionUrl: `/perdiem?highlight=${perDiemRequest._id}`,
+                                meta: {
+                                    destination,
+                                    numberOfDays,
+                                    startDate,
+                                    endDate,
+                  vehiclePlate,
+                                    newStatus: 'pending',
+                  requestedByName,
+                  driverName: requestedByName,
+                                }
+            });
+        } catch (e) { console.error('Notif create error:', e.message); }
+
+        // Notify approvers
+        try {
+            const approvers = await User.find({ role: { $in: ['admin', 'manager'] } }).select('_id');
+            const plateDoc = vehicleId ? await Vehicle.findById(vehicleId).select('plateNumber') : null;
+            const vehiclePlate = plateDoc?.plateNumber;
+            const reqDoc = await User.findById(req.user.id).select('fullName username email');
+            const requestedByName = reqDoc?.fullName || reqDoc?.username || reqDoc?.email;
+            if (approvers.length) {
+                const docs = approvers.map(u => ({
+                    user: u._id,
+                    type: 'perDiem',
+                    entityId: perDiemRequest._id,
+                    title: 'New per diem request pending',
+                    message: 'A per diem request requires your review and approval.',
+                    actionUrl: `/perdiem?highlight=${perDiemRequest._id}`,
+                    meta: {
+                      destination,
+                      numberOfDays,
+                      startDate,
+                      endDate,
+                      vehiclePlate,
+                      newStatus: 'pending',
+                      requestedByName,
+                      driverName: requestedByName,
+                    }
+                }));
+                await Notification.insertMany(docs);
+            }
+        } catch (e) { console.error('Notif approvers error:', e.message); }
 
         const populated = await PerDiemRequest.findById(perDiemRequest._id)
             .populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'fullName username email' } })
@@ -159,10 +215,58 @@ const updatePerDiemRequest = async (req, res) => {
                 perDiemRequest.approvedBy = req.user.id;
                 perDiemRequest.issuedDate = new Date();
                 message = `Per-Diem request has been approved.`;
+                try {
+                    const plateDoc = perDiemRequest.vehicleId ? await Vehicle.findById(perDiemRequest.vehicleId).select('plateNumber') : null;
+                    const vehiclePlate = plateDoc?.plateNumber;
+                    const reqDoc = await User.findById(perDiemRequest.requestedBy).select('fullName username email');
+                    const requestedByName = reqDoc?.fullName || reqDoc?.username || reqDoc?.email;
+                    await Notification.create({
+                        user: perDiemRequest.requestedBy,
+                        type: 'perDiem',
+                        entityId: perDiemRequest._id,
+                        title: 'Per diem approved',
+                        message: 'Your per diem request has been approved.',
+                        actionUrl: `/perdiem?highlight=${perDiemRequest._id}`,
+                        meta: {
+                          destination: perDiemRequest.destination,
+                          numberOfDays: perDiemRequest.numberOfDays,
+                          startDate: perDiemRequest.startDate,
+                          endDate: perDiemRequest.endDate,
+                          vehiclePlate,
+                          newStatus: 'approved',
+                          requestedByName,
+                          driverName: requestedByName,
+                        }
+                    });
+                } catch (e) { console.error('Notif create error:', e.message); }
             } else if (status === 'rejected') {
                 perDiemRequest.status = 'rejected';
                 perDiemRequest.approvedBy = req.user.id;
                 message = `Per-Diem request has been rejected.`;
+                try {
+                    const plateDoc = perDiemRequest.vehicleId ? await Vehicle.findById(perDiemRequest.vehicleId).select('plateNumber') : null;
+                    const vehiclePlate = plateDoc?.plateNumber;
+                    const reqDoc = await User.findById(perDiemRequest.requestedBy).select('fullName username email');
+                    const requestedByName = reqDoc?.fullName || reqDoc?.username || reqDoc?.email;
+                    await Notification.create({
+                        user: perDiemRequest.requestedBy,
+                        type: 'perDiem',
+                        entityId: perDiemRequest._id,
+                        title: 'Per diem rejected',
+                        message: 'Your per diem request has been rejected.',
+                        actionUrl: `/perdiem?highlight=${perDiemRequest._id}`,
+                        meta: {
+                          destination: perDiemRequest.destination,
+                          numberOfDays: perDiemRequest.numberOfDays,
+                          startDate: perDiemRequest.startDate,
+                          endDate: perDiemRequest.endDate,
+                          vehiclePlate,
+                          newStatus: 'rejected',
+                          requestedByName,
+                          driverName: requestedByName,
+                        }
+                    });
+                } catch (e) { console.error('Notif create error:', e.message); }
             } else {
                 return res.status(400).json({ message: "Invalid status. Must be 'approved' or 'rejected'." });
             }
@@ -177,11 +281,11 @@ const updatePerDiemRequest = async (req, res) => {
             Object.assign(perDiemRequest, otherUpdatableFields);
         }
 
-    const updatedRequest = await perDiemRequest.save();
-    await updatedRequest.populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'fullName username email' } });
-    await updatedRequest.populate('approvedBy', 'fullName username email');
-    await updatedRequest.populate('driverId', 'fullName username email');
-    await updatedRequest.populate('requestedBy', 'fullName username email');
+        const updatedRequest = await perDiemRequest.save();
+        await updatedRequest.populate({ path: 'vehicleId', populate: { path: 'assignedDriver', select: 'fullName username email' } });
+        await updatedRequest.populate('approvedBy', 'fullName username email');
+        await updatedRequest.populate('driverId', 'fullName username email');
+        await updatedRequest.populate('requestedBy', 'fullName username email');
 
         return res.status(200).json(updatedRequest);
 

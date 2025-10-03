@@ -1,5 +1,7 @@
 const Vehicle = require('../models/vehicleModel'); // vehicle model
 const MaintenanceRequest = require('../models/maintenanceRequest'); // maintenance request model
+const Notification = require('../models/notification');
+const User = require('../models/userModel');
 const mongoose = require('mongoose');
 //const categoryOptions = require('../config/categoryOption'); // category options
 
@@ -48,6 +50,57 @@ const createMaintenance = async (req, res) => {
     });
 
     await request.save();
+
+    // Resolve requester/driver names
+    let requesterDoc = null;
+    try { requesterDoc = await User.findById(req.user.id).select('fullName username email'); } catch {}
+    const requestedByName = requesterDoc?.fullName || requesterDoc?.username || requesterDoc?.email;
+
+    // Notify requester
+    try {
+      await Notification.create({
+        user: req.user.id,
+        type: 'maintenance',
+        entityId: request._id,
+        title: 'Maintenance request submitted',
+        message: `Maintenance request created for vehicle ${vehicle.plateNumber || vehicle._id}`,
+        actionUrl: `/maintenance?highlight=${request._id}`,
+        meta: {
+          vehiclePlate: vehicle.plateNumber || undefined,
+          category,
+          description,
+          priority: request.priority,
+          newStatus: 'pending',
+          requestedByName,
+          driverName: requestedByName,
+        }
+      });
+    } catch (e) { console.error('Notif create error:', e.message); }
+
+    // Notify approvers
+    try {
+      const approvers = await User.find({ role: { $in: ['admin', 'manager'] } }).select('_id');
+      if (approvers.length) {
+        const docs = approvers.map(u => ({
+          user: u._id,
+          type: 'maintenance',
+          entityId: request._id,
+          title: 'New maintenance request pending',
+          message: 'A maintenance request requires your review and approval.',
+          actionUrl: `/maintenance?highlight=${request._id}`,
+          meta: {
+            vehiclePlate: vehicle.plateNumber || undefined,
+            category,
+            description,
+            priority: request.priority,
+            newStatus: 'pending',
+            requestedByName,
+            driverName: requestedByName,
+          }
+        }));
+        await Notification.insertMany(docs);
+      }
+    } catch (e) { console.error('Notif approvers error:', e.message); }
 
     // update vehicle status → under_maintenance
     vehicle.status = "under_maintenance";
@@ -133,7 +186,7 @@ const updateMaintenance = async (req, res) => {
       completed: [],
     };
 
-    if (status) {
+  if (status) {
       const allowed = allowedTransitions[currentStatus] || [];
       if (!allowed.includes(status)) {
         return res.status(400).json({
@@ -152,6 +205,26 @@ const updateMaintenance = async (req, res) => {
       if (status === "approved" && !request.approvedBy) {
         request.approvedBy = req.user.id;
         request.approvedDate = new Date();
+        try {
+          const reqDoc = await User.findById(request.requestedBy).select('fullName username email');
+          const requestedByName = reqDoc?.fullName || reqDoc?.username || reqDoc?.email;
+          await Notification.create({
+            user: request.requestedBy,
+            type: 'maintenance',
+            entityId: request._id,
+            title: 'Maintenance approved',
+            message: 'Your maintenance request has been approved.',
+            actionUrl: `/maintenance?highlight=${request._id}`,
+            meta: {
+              vehiclePlate: (await Vehicle.findById(request.vehicleId).select('plateNumber'))?.plateNumber,
+              category: request.category,
+              priority: request.priority,
+              newStatus: 'approved',
+              requestedByName,
+              driverName: requestedByName,
+            }
+          });
+        } catch (e) { console.error('Notif create error:', e.message); }
       }
 
       
@@ -160,6 +233,27 @@ const updateMaintenance = async (req, res) => {
         if (cost !== undefined) {
           request.cost = cost;
         }
+        try {
+          const reqDoc = await User.findById(request.requestedBy).select('fullName username email');
+          const requestedByName = reqDoc?.fullName || reqDoc?.username || reqDoc?.email;
+          await Notification.create({
+            user: request.requestedBy,
+            type: 'maintenance',
+            entityId: request._id,
+            title: 'Maintenance completed',
+            message: 'Your maintenance request has been completed.',
+            actionUrl: `/maintenance?highlight=${request._id}`,
+            meta: {
+              vehiclePlate: (await Vehicle.findById(request.vehicleId).select('plateNumber'))?.plateNumber,
+              category: request.category,
+              priority: request.priority,
+              cost: request.cost ?? undefined,
+              newStatus: 'completed',
+              requestedByName,
+              driverName: requestedByName,
+            }
+          });
+        } catch (e) { console.error('Notif create error:', e.message); }
       }
       
       
@@ -167,7 +261,7 @@ const updateMaintenance = async (req, res) => {
     }
 
     // Allow updating cost without status change only if not already final (completed/rejected)
-    if (!status && cost !== undefined) {
+  if (!status && cost !== undefined) {
       if (currentStatus === 'completed' || currentStatus === 'rejected') {
         return res.status(400).json({ message: `Cannot update cost for a ${currentStatus} request.` });
       }
@@ -182,6 +276,28 @@ const updateMaintenance = async (req, res) => {
       if (vehicle) {
         vehicle.status = "active";
         await vehicle.save();
+      }
+      if (status === 'rejected') {
+        try {
+          const reqDoc = await User.findById(request.requestedBy).select('fullName username email');
+          const requestedByName = reqDoc?.fullName || reqDoc?.username || reqDoc?.email;
+          await Notification.create({
+            user: request.requestedBy,
+            type: 'maintenance',
+            entityId: request._id,
+            title: 'Maintenance rejected',
+            message: 'Your maintenance request has been rejected.',
+            actionUrl: `/maintenance?highlight=${request._id}`,
+            meta: {
+              vehiclePlate: (await Vehicle.findById(request.vehicleId).select('plateNumber'))?.plateNumber,
+              category: request.category,
+              priority: request.priority,
+              newStatus: 'rejected',
+              requestedByName,
+              driverName: requestedByName,
+            }
+          });
+        } catch (e) { console.error('Notif create error:', e.message); }
       }
     }
 

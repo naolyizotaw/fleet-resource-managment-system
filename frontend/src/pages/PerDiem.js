@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { perDiemAPI, vehiclesAPI, usersAPI } from '../services/api';
 import { Receipt, Plus, Search, Filter, Truck, AlertCircle, CheckCircle, Clock, Calendar, Edit, Trash2, ThumbsUp, ThumbsDown } from 'lucide-react';
@@ -16,6 +17,10 @@ const PerDiem = () => {
   const [editingRequest, setEditingRequest] = useState(null);
   const [conflictInfo, setConflictInfo] = useState(null);
   const [formError, setFormError] = useState(null);
+  const [highlightedId, setHighlightedId] = useState(null);
+  const rowRefs = useRef({});
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
   vehicleId: '',
@@ -73,6 +78,24 @@ const PerDiem = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Deep link highlighting via ?highlight=<id>
+  useEffect(() => {
+    if (loading) return;
+    const params = new URLSearchParams(location.search);
+    const targetId = params.get('highlight');
+    if (!targetId) return;
+    const el = rowRefs.current[targetId];
+    if (el) {
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+      setHighlightedId(targetId);
+      const t = setTimeout(() => setHighlightedId(null), 4500);
+      const newParams = new URLSearchParams(location.search);
+      newParams.delete('highlight');
+      navigate({ pathname: location.pathname, search: newParams.toString() ? `?${newParams.toString()}` : '' }, { replace: true });
+      return () => clearTimeout(t);
+    }
+  }, [loading, requests, location.search, location.pathname, navigate]);
 
   
 
@@ -329,7 +352,11 @@ const PerDiem = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredRequests.map((request) => (
-                <tr key={request._id} className="hover:bg-gray-50">
+                <tr
+                  key={request._id}
+                  ref={(el) => { if (el) rowRefs.current[request._id] = el; }}
+                  className={`hover:bg-gray-50 ${highlightedId === request._id ? 'bg-yellow-50 ring-2 ring-amber-400' : ''}`}
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       {getStatusIcon(request.status)}

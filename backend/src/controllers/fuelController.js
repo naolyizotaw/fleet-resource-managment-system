@@ -1,5 +1,7 @@
 const FuelRequest = require('../models/fuelRequest');
 const Vehicle = require('../models/vehicleModel');
+const Notification = require('../models/notification');
+const User = require('../models/userModel');
 const mongoose = require('mongoose');
 
 //@desc Create a new fuel request from a form
@@ -46,6 +48,59 @@ const createFuelRequest = async (req, res) => {
         });
 
         await fuelRequest.save();
+
+                        // Resolve names
+                        let requesterDoc = null;
+                        try { requesterDoc = await User.findById(req.user.id).select('fullName username email'); } catch {}
+                        const requesterName = requesterDoc?.fullName || requesterDoc?.username || requesterDoc?.email;
+
+                        // Notify requester themselves
+        try {
+            await Notification.create({
+                user: req.user.id,
+                type: 'fuel',
+                entityId: fuelRequest._id,
+                title: 'Fuel request submitted',
+                message: `Fuel request submitted and pending approval.`,
+                                actionUrl: `/fuel?highlight=${fuelRequest._id}`,
+                                meta: {
+                                    vehiclePlate: vehicle.plateNumber || undefined,
+                                    quantity,
+                                    fuelType,
+                                    pricePerLitre: pricePerLitre ?? undefined,
+                                    cost: cost ?? undefined,
+                                    newStatus: 'pending',
+                                            driverName: requesterName,
+                                            requestedByName: requesterName,
+                                }
+            });
+        } catch (e) { console.error('Notif create error:', e.message); }
+
+        // Notify all admins/managers to review
+        try {
+            const approvers = await User.find({ role: { $in: ['admin', 'manager'] } }).select('_id');
+            if (approvers.length) {
+                                const docs = approvers.map(u => ({
+                    user: u._id,
+                    type: 'fuel',
+                    entityId: fuelRequest._id,
+                    title: 'New fuel request pending',
+                    message: `A fuel request requires your review and approval.`,
+                    actionUrl: `/fuel?highlight=${fuelRequest._id}`,
+                    meta: {
+                      vehiclePlate: vehicle.plateNumber || undefined,
+                      quantity,
+                      fuelType,
+                      pricePerLitre: pricePerLitre ?? undefined,
+                      cost: cost ?? undefined,
+                      newStatus: 'pending',
+                                            driverName: requesterName,
+                                            requestedByName: requesterName,
+                    }
+                }));
+                await Notification.insertMany(docs);
+            }
+        } catch (e) { console.error('Notif approvers error:', e.message); }
 
         vehicle.currentKm = currentKm;
         await vehicle.save();
@@ -149,9 +204,54 @@ const updateFuelRequest = async (req, res) => {
                     fuelRequest.pricePerLitre = pricePerLitre;
                 }
                 if (cost !== undefined) fuelRequest.cost = cost; // fallback if no pricePerLitre
+                // Notify requester
+                try {
+                    const veh = await Vehicle.findById(fuelRequest.vehicleId).select('plateNumber');
+                    const userDoc = await User.findById(fuelRequest.requestedBy).select('fullName username email');
+                    const driverName = userDoc?.fullName || userDoc?.username || userDoc?.email;
+                    await Notification.create({
+                        user: fuelRequest.requestedBy,
+                        type: 'fuel',
+                        entityId: fuelRequest._id,
+                        title: 'Fuel request approved',
+                        message: 'Your fuel request has been approved.',
+                        actionUrl: `/fuel?highlight=${fuelRequest._id}`,
+                        meta: {
+                          vehiclePlate: veh?.plateNumber || undefined,
+                          quantity: fuelRequest.quantity,
+                          fuelType: fuelRequest.fuelType,
+                          pricePerLitre: fuelRequest.pricePerLitre ?? undefined,
+                          cost: fuelRequest.cost ?? undefined,
+                          newStatus: 'approved',
+                          driverName,
+                          requestedByName: driverName,
+                        }
+                    });
+                } catch (e) { console.error('Notif create error:', e.message); }
             } else if (status === 'rejected') {
                 fuelRequest.status = 'rejected';
                 fuelRequest.approvedBy = req.user.id;
+                try {
+                    const veh = await Vehicle.findById(fuelRequest.vehicleId).select('plateNumber');
+                    const userDoc = await User.findById(fuelRequest.requestedBy).select('fullName username email');
+                    const driverName = userDoc?.fullName || userDoc?.username || userDoc?.email;
+                    await Notification.create({
+                        user: fuelRequest.requestedBy,
+                        type: 'fuel',
+                        entityId: fuelRequest._id,
+                        title: 'Fuel request rejected',
+                        message: 'Your fuel request has been rejected.',
+                        actionUrl: `/fuel?highlight=${fuelRequest._id}`,
+                        meta: {
+                          vehiclePlate: veh?.plateNumber || undefined,
+                          quantity: fuelRequest.quantity,
+                          fuelType: fuelRequest.fuelType,
+                          newStatus: 'rejected',
+                          driverName,
+                          requestedByName: driverName,
+                        }
+                    });
+                } catch (e) { console.error('Notif create error:', e.message); }
             } else {
                 return res.status(400).json({ message: "Invalid status. Must be 'approved' or 'rejected'." });
             }
