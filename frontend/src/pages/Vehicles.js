@@ -26,6 +26,7 @@ const Vehicles = () => {
     year: '',
     fuelType: 'Petrol',
     currentKm: '',
+    serviceIntervalKm: '',
     assignedDriver: '',
     status: 'active',
   };
@@ -56,8 +57,15 @@ const Vehicles = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // sanitize number fields
+      const payload = {
+        ...formData,
+        year: formData.year === '' ? undefined : Number(formData.year),
+        currentKm: formData.currentKm === '' ? undefined : Number(formData.currentKm),
+        serviceIntervalKm: formData.serviceIntervalKm === '' ? undefined : Number(formData.serviceIntervalKm),
+      };
       if (editingVehicle) {
-        await vehiclesAPI.update(editingVehicle._id, formData);
+        await vehiclesAPI.update(editingVehicle._id, payload);
         toast.success('Vehicle updated successfully');
         // clear any previous error for this vehicle
         setVehicleErrors(prev => {
@@ -66,7 +74,7 @@ const Vehicles = () => {
           return copy;
         });
       } else {
-        await vehiclesAPI.create(formData);
+        await vehiclesAPI.create(payload);
         toast.success('Vehicle created successfully');
       }
       setFormError('');
@@ -95,6 +103,7 @@ const Vehicles = () => {
       year: vehicle.year || '',
       fuelType: vehicle.fuelType || 'Petrol',
       currentKm: vehicle.currentKm || '',
+      serviceIntervalKm: (vehicle.serviceIntervalKm ?? '') || '',
       assignedDriver: vehicle.assignedDriver?._id || '',
       status: vehicle.status || 'active',
     });
@@ -222,6 +231,7 @@ const Vehicles = () => {
                 <th className="table-header">Driver</th>
                 <th className="table-header">Status</th>
                 <th className="table-header">Current KM</th>
+                <th className="table-header">Service Interval</th>
                 <th className="table-header">Fuel Type</th>
                 <th className="table-header">Actions</th>
               </tr>
@@ -261,6 +271,7 @@ const Vehicles = () => {
                     </span>
                   </td>
                   <td className="table-cell">{vehicle.currentKm?.toLocaleString()} km</td>
+                  <td className="table-cell">{(vehicle.serviceIntervalKm ?? 5000).toLocaleString()} km</td>
                   <td className="table-cell">{vehicle.fuelType}</td>
                   <td className="table-cell">
                     <div className="flex items-center gap-2">
@@ -365,6 +376,17 @@ const Vehicles = () => {
                   <div>
                     <label className="form-label">Current Kilometers</label>
                     <input type="number" value={formData.currentKm} onChange={(e) => setFormData({...formData, currentKm: e.target.value})} className="input-field" required />
+                  </div>
+                  <div>
+                    <label className="form-label">Service Interval (KM)</label>
+                    <input
+                      type="number"
+                      value={formData.serviceIntervalKm}
+                      onChange={(e) => setFormData({ ...formData, serviceIntervalKm: e.target.value })}
+                      className="input-field"
+                      placeholder="e.g. 5000"
+                      min="0"
+                    />
                   </div>
                   <div>
                     <label className="form-label">Assigned Driver</label>

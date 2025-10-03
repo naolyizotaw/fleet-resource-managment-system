@@ -35,6 +35,12 @@ const vehicleSchema = new mongoose.Schema ({
         type: Number,
         required: true,
     },
+    // Service interval in kilometers for regular maintenance (e.g., 5000 km)
+    serviceIntervalKm: {
+        type: Number,
+        min: 0,
+        default: 5000,
+    },
     assignedDriver: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
