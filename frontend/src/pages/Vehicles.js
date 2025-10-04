@@ -354,6 +354,118 @@ const Vehicles = () => {
     }
   };
 
+  const printHistoryReport = () => {
+    if (!historyVehicle) return;
+    try {
+      // Build a simple company-style HTML report
+      const companyName = 'ACME Fleet Services';
+      const reportTitle = `Vehicle History Report - ${historyVehicle.plateNumber || ''}`;
+      const styles = `
+        body { font-family: Arial, sans-serif; color: #111827; margin: 20px; }
+        .header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e5e7eb; padding-bottom:10px; margin-bottom:20px }
+        .company { font-size:18px; font-weight:700 }
+        .meta { text-align:right; font-size:12px; color:#6b7280 }
+        table { width:100%; border-collapse:collapse; margin-top:10px }
+        th, td { border:1px solid #e5e7eb; padding:8px; text-align:left; font-size:13px }
+        th { background:#f9fafb; font-weight:600 }
+        .section-title { margin-top:18px; font-weight:700 }
+      `;
+
+      const escape = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+      const maintRows = (historyVehicle.maintenance || []).map(i => `
+        <tr>
+          <td>${escape(i._id)}</td>
+          <td>${escape(historyVehicle.manufacturer)} ${escape(historyVehicle.model)}</td>
+          <td>${escape(historyVehicle.plateNumber)}</td>
+          <td>${escape(i.category)}</td>
+          <td>${escape(i.description || i.notes)}</td>
+          <td>${escape(i.priority)}</td>
+          <td>${escape(i.requestedBy?.fullName || i.requestedBy || i.requester)}</td>
+          <td>${escape(i.approvedBy?.fullName || i.approvedBy)}</td>
+          <td>${escape(i.status)}</td>
+          <td>${escape(i.requestedDate || i.createdAt)}</td>
+          <td>${escape(i.completedDate || '')}</td>
+          <td>${escape(i.cost != null ? i.cost : '')}</td>
+          <td>${escape(i.remarks || '')}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="13">No maintenance records</td></tr>';
+
+      const fuelRows = (historyVehicle.fuel || []).map(i => `
+        <tr>
+          <td>${escape(i._id)}</td>
+          <td>${escape(historyVehicle.manufacturer)} ${escape(historyVehicle.model)}</td>
+          <td>${escape(historyVehicle.plateNumber)}</td>
+          <td>${escape(i.fuelType)}</td>
+          <td>${escape(i.quantity ?? '')}</td>
+          <td>${escape(i.pricePerLitre ?? '')}</td>
+          <td>${escape(i.cost != null ? i.cost : '')}</td>
+          <td>${escape(i.currentKm ?? '')}</td>
+          <td>${escape(i.purpose || '')}</td>
+          <td>${escape(i.requestedBy?.fullName || i.requestedBy || i.requester)}</td>
+          <td>${escape(i.approvedBy?.fullName || i.approvedBy)}</td>
+          <td>${escape(i.status)}</td>
+          <td>${escape(i.createdAt || '')}</td>
+          <td>${escape(i.issuedDate || '')}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="14">No fuel records</td></tr>';
+
+      const html = `
+        <html>
+          <head>
+            <title>${reportTitle}</title>
+            <style>${styles}</style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="company">${companyName}</div>
+              <div class="meta">${new Date().toLocaleString()}</div>
+            </div>
+            <h2>${reportTitle}</h2>
+            <div><strong>Vehicle:</strong> ${escape(historyVehicle.manufacturer || '')} ${escape(historyVehicle.model || '')} (${escape(historyVehicle.plateNumber || '')})</div>
+            <div class="section-title">Maintenance</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Req ID</th><th>Vehicle</th><th>Plate</th><th>Category</th><th>Description</th><th>Priority</th>
+                  <th>Requested By</th><th>Approved By</th><th>Status</th><th>Requested</th><th>Completed</th><th>Cost</th><th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>${maintRows}</tbody>
+            </table>
+
+            <div class="section-title">Fuel</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Req ID</th><th>Vehicle</th><th>Plate</th><th>Fuel Type</th><th>Quantity</th><th>Price/L</th>
+                  <th>Total Cost</th><th>KM</th><th>Purpose</th><th>Requested By</th><th>Approved By</th><th>Status</th><th>Requested</th><th>Issued</th>
+                </tr>
+              </thead>
+              <tbody>${fuelRows}</tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+      const w = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=900,height=700');
+      if (!w) {
+        setAlert({ type: 'error', message: 'Popup blocked. Allow popups for this site to print.' });
+        setTimeout(() => setAlert({ type: '', message: '' }), 4000);
+        return;
+      }
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      // Give the window a moment to render before printing
+      setTimeout(() => { w.print(); }, 500);
+    } catch (err) {
+      console.error('Print report error', err);
+      setAlert({ type: 'error', message: 'Failed to generate print report' });
+      setTimeout(() => setAlert({ type: '', message: '' }), 4000);
+    }
+  };
+
 
   const confirmDelete = (vehicle) => {
     setVehicleToDelete(vehicle);
@@ -684,7 +796,7 @@ const Vehicles = () => {
                     <button onClick={exportHistory} title="Export history CSV" className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
                       <DownloadCloud className="h-4 w-4" /> Export
                     </button>
-                    <button onClick={() => window.print()} title="Print history" className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
+                    <button onClick={printHistoryReport} title="Print history" className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
                       <Printer className="h-4 w-4" /> Print
                     </button>
                     <button onClick={() => setShowHistoryModal(false)} title="Close history" className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
