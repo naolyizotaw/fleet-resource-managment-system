@@ -327,13 +327,72 @@ const Vehicles = () => {
       }));
 
       const wb = XLSX.utils.book_new();
+
+      // Cover sheet (company template)
+  const companyName = 'ACME Fleet Services';
+      const coverLines = [
+        [companyName],
+        [],
+        ['Report', `Vehicle History Report`],
+        ['Plate Number', vehicleInfo.PlateNumber || ''],
+        ['Manufacturer', vehicleInfo.Manufacturer || ''],
+        ['Model', vehicleInfo.Model || ''],
+        ['Year', vehicleInfo.Year || ''],
+        ['Fuel Type', vehicleInfo.FuelType || ''],
+        ['Current KM', vehicleInfo.CurrentKM || ''],
+        ['Status', vehicleInfo.Status || ''],
+        [],
+        ['Generated On', new Date().toLocaleString()],
+      ];
+      const coverSheet = XLSX.utils.aoa_to_sheet(coverLines);
+      // Make first row larger by merging and leaving cell A1 as title (merge A1:D1)
+      coverSheet['!merges'] = coverSheet['!merges'] || [];
+      coverSheet['!merges'].push({ s: { r:0, c:0 }, e: { r:0, c:3 } });
+      // set some column widths (approx)
+      coverSheet['!cols'] = [{ wch: 30 }, { wch: 40 }, { wch: 20 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, coverSheet, 'Cover');
+
+      // Vehicle sheet
       const vehicleSheet = XLSX.utils.json_to_sheet([vehicleInfo]);
+      vehicleSheet['!cols'] = [{ wch: 18 }, { wch: 22 }, { wch: 18 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 14 }];
       XLSX.utils.book_append_sheet(wb, vehicleSheet, 'Vehicle');
 
+      // Maintenance sheet
       const maintSheet = XLSX.utils.json_to_sheet(maintRows.length ? maintRows : [{ Note: 'No maintenance records' }]);
+      // set reasonable column widths for readability
+      maintSheet['!cols'] = [
+        { wch: 18 }, // RequestID
+        { wch: 16 }, // PlateNumber
+        { wch: 12 }, // Category
+        { wch: 40 }, // Description
+        { wch: 10 }, // ServiceKM
+        { wch: 10 }, // Priority
+        { wch: 18 }, // Status
+        { wch: 20 }, // RequestedBy
+        { wch: 20 }, // ApprovedBy
+        { wch: 14 }, // CompletedDate
+        { wch: 10 }, // Cost
+        { wch: 30 }, // Remarks
+        { wch: 14 }, // CreatedAt
+      ];
       XLSX.utils.book_append_sheet(wb, maintSheet, 'Maintenance');
 
+      // Fuel sheet
       const fuelSheet = XLSX.utils.json_to_sheet(fuelRows.length ? fuelRows : [{ Note: 'No fuel records' }]);
+      fuelSheet['!cols'] = [
+        { wch: 18 }, // RequestID
+        { wch: 16 }, // PlateNumber
+        { wch: 10 }, // Quantity
+        { wch: 12 }, // FuelType
+        { wch: 12 }, // CurrentKM
+        { wch: 14 }, // Status
+        { wch: 20 }, // RequestedBy
+        { wch: 20 }, // ApprovedBy
+        { wch: 14 }, // IssuedDate
+        { wch: 10 }, // Cost
+        { wch: 20 }, // Purpose
+        { wch: 14 }, // CreatedAt
+      ];
       XLSX.utils.book_append_sheet(wb, fuelSheet, 'Fuel');
 
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -605,12 +664,12 @@ const Vehicles = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="table-cell">{vehicle.plateNumber}</td>
-                  <td className="table-cell">
+                  <td className="table-cell whitespace-nowrap">{vehicle.plateNumber}</td>
+                  <td className="table-cell max-w-[180px]">
                     {vehicle.assignedDriver ? (
-                      <div className="flex items-center">
-                        <User className="h-4 w-4 text-gray-400 mr-2" />
-                        <span className="text-sm text-gray-900">
+                      <div className="flex items-center min-w-0">
+                        <User className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+                        <span className="text-sm text-gray-900 truncate block w-full">
                           {vehicle.assignedDriver.fullName || vehicle.assignedDriver.username || 'Unknown'}
                         </span>
                       </div>
