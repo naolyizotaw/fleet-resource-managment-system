@@ -17,11 +17,18 @@ const maintenanceRequestSchema = new mongoose.Schema(
         "Engine",
         "Tires & Wheels",
         "Brakes",
+        "Service",
         "Electrical",
         "Cargo",
         "Machinery",
         "Other",
       ],
+    },
+    // For Service category requests, optional planned/recorded odometer reading
+    serviceKm: {
+      type: Number,
+      min: 0,
+      default: null,
     },
     priority: {
       type: String,

@@ -28,8 +28,10 @@ const createVehicle = async (req, res) => {
         }
     const vehicle = await Vehicle.create(data);
     const populated = await vehicle.populate({ path: 'assignedDriver', select: 'fullName username role' });
-        console.log(populated);
-        return res.status(201).json(populated);
+        // Ensure virtuals (serviceInfo) are included in the JSON response
+        const out = populated && populated.toObject ? populated.toObject({ virtuals: true }) : populated;
+        console.log(out);
+        return res.status(201).json(out);
          
         
     } catch (err) {
@@ -52,7 +54,9 @@ const createVehicle = async (req, res) => {
 const getVehicles = async (req, res) => {
     try {
     const vehicles = await Vehicle.find({}).populate({ path: 'assignedDriver', select: 'fullName username role' });
-        return res.status(200).json(vehicles);
+        // Include virtuals in each vehicle object
+        const out = vehicles.map(v => v && v.toObject ? v.toObject({ virtuals: true }) : v);
+        return res.status(200).json(out);
     } catch (err) {
         return res.status(500).json({ message: err.message });
     }
@@ -73,15 +77,43 @@ const getVehicleById = async (req, res) => {
         if (!vehicle) {
             return res.status(404).json({ message: 'Vehicle not found' });
         }
-        return res.status(200).json(vehicle);
+                const out = vehicle && vehicle.toObject ? vehicle.toObject({ virtuals: true }) : vehicle;
+
+                // Also include maintenance and fuel requests related to this vehicle to simplify client-side work
+                try {
+                    const MaintenanceRequest = require('../models/maintenanceRequest');
+                    const FuelRequest = require('../models/fuelRequest');
+
+                                // Only include completed maintenance requests and approved fuel requests for history
+                                const [maintRequests, fuelRequests] = await Promise.all([
+                                    MaintenanceRequest.find({ vehicleId: id, status: 'completed' })
+                                        .populate('requestedBy', 'fullName username')
+                                        .populate('approvedBy', 'fullName username')
+                                        .populate('driverId', 'fullName username'),
+                                    FuelRequest.find({ vehicleId: id, status: 'approved' })
+                                        .populate('requestedBy', 'fullName username')
+                                        .populate('approvedBy', 'fullName username')
+                                        .populate('driverId', 'fullName username')
+                                ]);
+
+                    out.maintenance = maintRequests || [];
+                    out.fuel = fuelRequests || [];
+                } catch (e) {
+                    // If models can't be loaded for some reason, don't fail the whole request
+                    console.error('Error attaching maintenance/fuel to vehicle output:', e.message);
+                    out.maintenance = out.maintenance || [];
+                    out.fuel = out.fuel || [];
+                }
+
+                return res.status(200).json(out);
     } catch (err) {
         return res.status(500).json({ message: err.message });
     }
 };
 
-//@desc createVehicle 
-//@route POST /api/vehicles/create
-//@access public
+// @desc createVehicle 
+// @route POST /api/vehicles/create
+// @access public
 const updateVehicle = async (req, res) => {
     try {
         const { id } = req.params;
@@ -104,16 +136,17 @@ const updateVehicle = async (req, res) => {
         if (!updatedVehicle) {
             return res.status(404).json({ message: 'Vehicle not found' });
         }
-        return res.status(200).json(updatedVehicle);
+        const out = updatedVehicle && updatedVehicle.toObject ? updatedVehicle.toObject({ virtuals: true }) : updatedVehicle;
+        return res.status(200).json(out);
     } catch (err) {
         const status = err.name === 'ValidationError' ? 400 : 500;
         return res.status(status).json({ message: err.message });
     }
 };
 
-//@desc createVehicle 
-//@route POST /api/vehicles/create
-//@access public
+// @desc createVehicle 
+// @route POST /api/vehicles/create
+// @access public
 const deleteVehicle = async (req, res) => {
     try {
         const { id } = req.params;
@@ -130,10 +163,49 @@ const deleteVehicle = async (req, res) => {
     }
 };
 
+// @desc Record a service event for a vehicle
+// @route POST /api/vehicles/:id/service
+// @access admin/manager
+const markVehicleService = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid vehicle id' });
+        }
+
+        const { km, date, notes, performedBy } = req.body;
+
+        const vehicle = await Vehicle.findById(id);
+        if (!vehicle) {
+            return res.status(404).json({ message: 'Vehicle not found' });
+        }
+
+        // default service km to provided km or currentKm if not provided
+        const serviceKm = (typeof km === 'number' && !isNaN(km)) ? km : vehicle.currentKm;
+        const serviceDate = date ? new Date(date) : new Date();
+
+        vehicle.maintenanceHistory = vehicle.maintenanceHistory || [];
+        vehicle.maintenanceHistory.push({ km: serviceKm, date: serviceDate, notes, performedBy });
+
+        // update previousServiceKm to reflect the most recent service
+        vehicle.previousServiceKm = serviceKm;
+
+        await vehicle.save();
+
+        const populated = await Vehicle.findById(id).populate({ path: 'assignedDriver', select: 'fullName username role' });
+        const out = populated && populated.toObject ? populated.toObject({ virtuals: true }) : populated;
+        return res.status(200).json(out);
+    } catch (err) {
+        const status = err.name === 'ValidationError' ? 400 : 500;
+        return res.status(status).json({ message: err.message });
+    }
+};
+
 module.exports = {
     createVehicle,
     getVehicles,
     getVehicleById,
     updateVehicle,
     deleteVehicle
+    ,markVehicleService
 };

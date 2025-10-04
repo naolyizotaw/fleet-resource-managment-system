@@ -140,6 +140,9 @@ const Maintenance = () => {
   priority: formData.priority,
         description: formData.description,
       };
+      if (formData.category === 'Service' && formData.serviceKm !== undefined && formData.serviceKm !== '') {
+        payload.serviceKm = Number(formData.serviceKm);
+      }
       if (formData.estimatedCost) payload.cost = Number(formData.estimatedCost);
       if (formData.notes) payload.remarks = formData.notes;
 
@@ -202,6 +205,20 @@ const Maintenance = () => {
       const response = await maintenanceAPI.update(requestId, { status: newStatus });
       const updated = response.data?.request || response.data;
       setRequests(requests.map(r => r._id === requestId ? updated : r));
+      // If backend included nextServiceInfo (we completed a Service), refresh that vehicle so vehicle list shows updated next-service values
+      try {
+        const nextInfo = response.data?.nextServiceInfo;
+        const vehicleId = updated?.vehicleId?._id || updated?.vehicleId;
+        if (nextInfo && vehicleId) {
+          const vehRes = await vehiclesAPI.getById(vehicleId);
+          const veh = vehRes.data;
+          setVehicles(prev => prev.map(v => v._id === veh._id ? veh : v));
+          // notify other pages/components (Vehicles page) that a vehicle was updated
+          try { window.dispatchEvent(new CustomEvent('vehicle:updated', { detail: veh })); } catch (e) {}
+        }
+      } catch (e) {
+        console.error('Failed to refresh vehicle after status update:', e);
+      }
       setAlert({ type: 'success', message: 'Status updated successfully' });
       setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     } catch (error) {
@@ -229,6 +246,21 @@ const Maintenance = () => {
       const res = await maintenanceAPI.update(requestToComplete._id, { status: 'completed', cost: parsed, remarks: completeForm.remarks });
       const updated = res.data?.request || res.data;
       setRequests(requests.map(r => r._id === requestToComplete._id ? updated : r));
+
+      // If backend returned nextServiceInfo (we handled a Service), refresh that vehicle so Vehicles list updates immediately
+      try {
+        const nextInfo = res.data?.nextServiceInfo;
+  const vehicleId = updated?.vehicleId?._id || updated?.vehicleId || requestToComplete?.vehicleId;
+        if (nextInfo && vehicleId) {
+          const vehRes = await vehiclesAPI.getById(vehicleId);
+          const veh = vehRes.data;
+          setVehicles(prev => prev.map(v => v._id === veh._id ? veh : v));
+          try { window.dispatchEvent(new CustomEvent('vehicle:updated', { detail: veh })); } catch (e) {}
+        }
+      } catch (e) {
+        console.error('Failed to refresh vehicle after completion:', e);
+      }
+
       setShowCompleteModal(false);
       setRequestToComplete(null);
       setCompleteForm({ cost: '', remarks: '' });
@@ -675,9 +707,23 @@ const Maintenance = () => {
                       <option value="Electrical">Electrical</option>
                       <option value="Cargo">Cargo</option>
                       <option value="Machinery">Machinery</option>
+                      <option value="Service">Service</option>
                       <option value="Other">Other</option>
                     </select>
                   </div>
+                  {formData.category === 'Service' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Service KM (optional)</label>
+                      <input
+                        type="number"
+                        value={formData.serviceKm || ''}
+                        onChange={(e) => setFormData({...formData, serviceKm: e.target.value})}
+                        className="input-field mt-1"
+                        placeholder="Leave blank to use vehicle current KM"
+                        min="0"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Vehicle</label>
                     <select

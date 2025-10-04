@@ -5,6 +5,7 @@ const {
     getVehicleById,
     updateVehicle,
     deleteVehicle
+    ,markVehicleService
 } 
 = require("../controllers/vehicleController");
 
@@ -32,6 +33,8 @@ router.get("/mine", verifyToken, authorizeRoles("admin", "manager", "driver", "u
 router.get("/:id", verifyToken, authorizeRoles("admin", "manager"), getVehicleById);
 router.put("/:id", verifyToken, authorizeRoles("admin", "manager"), updateVehicle);
 router.delete("/:id", verifyToken, authorizeRoles("admin", "manager"), deleteVehicle);
+// record a service event
+router.post('/:id/service', verifyToken, authorizeRoles('admin', 'manager'), markVehicleService);
 
 
 

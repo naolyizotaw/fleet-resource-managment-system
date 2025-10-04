@@ -41,6 +41,18 @@ const vehicleSchema = new mongoose.Schema ({
         min: 0,
         default: 5000,
     },
+    // Record the odometer reading at the previous (last) service
+    previousServiceKm: {
+        type: Number,
+        min: 0,
+        default: 0,
+    },
+    // Record the odometer reading at vehicle creation (first known KM)
+    initialKm: {
+        type: Number,
+        min: 0,
+        // leave undefined by default; we'll set it on create to the provided currentKm
+    },
     assignedDriver: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
@@ -71,6 +83,15 @@ const vehicleSchema = new mongoose.Schema ({
         completedAt: Date,
       },
     ],
+        // History of individual service events (odometer reading at service, date, notes, who performed)
+        serviceHistory: [
+            {
+                km: { type: Number, required: true, min: 0 },
+                date: { type: Date, default: Date.now },
+                notes: { type: String },
+                performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+            }
+        ],
     createdAt: {
         type: Date,
         default: Date.now,
@@ -85,5 +106,57 @@ const vehicleSchema = new mongoose.Schema ({
 // Create a sparse unique index to ensure a driver id can appear at most once
 // across vehicles, while allowing null/unset assignedDriver values.
 vehicleSchema.index({ assignedDriver: 1 }, { unique: true, sparse: true });
+
+// Include virtuals in JSON and Object outputs so API responses contain
+// computed service information.
+vehicleSchema.set('toJSON', { virtuals: true });
+vehicleSchema.set('toObject', { virtuals: true });
+
+// On creation, if initialKm wasn't explicitly provided, populate it from currentKm
+vehicleSchema.pre('save', function(next) {
+    if (this.isNew) {
+        // only set initialKm when creating a new document and initialKm is not provided
+        if ((this.initialKm === undefined || this.initialKm === null) && (this.currentKm !== undefined && this.currentKm !== null)) {
+            this.initialKm = this.currentKm;
+        }
+    }
+    next();
+});
+
+// Virtual that computes service-related information using currentKm,
+// previousServiceKm and serviceIntervalKm.
+vehicleSchema.virtual('serviceInfo').get(function() {
+    const currentKm = Number(this.currentKm || 0);
+    // If there's no recorded previousServiceKm use the initialKm (the currentKm when the vehicle was created)
+    // Treat 0 or undefined previousServiceKm as "no previous service" and fall back to initialKm when available.
+    let prev;
+    if (this.previousServiceKm !== undefined && this.previousServiceKm !== null && this.previousServiceKm > 0) {
+        prev = Number(this.previousServiceKm);
+    } else if (this.initialKm !== undefined && this.initialKm !== null) {
+        prev = Number(this.initialKm);
+    } else {
+        prev = 0;
+    }
+    const interval = Number(this.serviceIntervalKm || 0);
+
+    if (!interval || interval <= 0) {
+        return null;
+    }
+
+    const delta = currentKm - prev;
+    // number of whole intervals that have passed since last service
+    const intervalsPassed = delta > 0 ? Math.floor(delta / interval) : 0;
+    // next service milestone at or after currentKm
+    const nCeil = delta > 0 ? Math.ceil(delta / interval) : 0;
+    const nextServiceKm = prev + nCeil * interval;
+    const kilometersUntilNextService = nextServiceKm - currentKm;
+
+    return {
+        lastServiceKm: prev,
+        nextServiceKm,
+        kilometersUntilNextService,
+        servicesDue: intervalsPassed
+    };
+});
 
 module.exports = mongoose.model("Vehicle", vehicleSchema);

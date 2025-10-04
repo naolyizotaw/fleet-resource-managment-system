@@ -11,7 +11,7 @@ const mongoose = require('mongoose');
 //@access driver, manager, admin
 const createMaintenance = async (req, res) => {
   try {
-  const { vehicleId, category, description, priority } = req.body;
+  const { vehicleId, category, description, priority, serviceKm } = req.body;
 
     if (!vehicleId || !category || !description) {
       return res.status(400).json({ 
@@ -42,14 +42,15 @@ const createMaintenance = async (req, res) => {
 
     const request = new MaintenanceRequest({
       vehicleId,
-      driverId: vehicle.assignedDriver || null,   
+      driverId: vehicle.assignedDriver || null,
       requestedBy: req.user.id,
       category,
-  description,
-  priority: priority || 'medium',
+      description,
+      priority: priority || 'medium',
+      serviceKm: (serviceKm !== undefined && serviceKm !== null && serviceKm !== '') ? Number(serviceKm) : null,
     });
 
-    await request.save();
+  await request.save();
 
     // Resolve requester/driver names
     let requesterDoc = null;
@@ -275,6 +276,35 @@ const updateMaintenance = async (req, res) => {
       const vehicle = await Vehicle.findById(request.vehicleId);
       if (vehicle) {
         vehicle.status = "active";
+        // If this was a Service category, compute a safe lastServiceKm and record it
+        if (request.category === 'Service') {
+          // Prefer provided serviceKm when present, otherwise fall back to vehicle.currentKm
+          let proposedKm = (request.serviceKm !== undefined && request.serviceKm !== null) ? Number(request.serviceKm) : (vehicle.currentKm || 0);
+
+          // Ensure we don't regress below the vehicle's currentKm — use the greater of proposed and currentKm
+          const currentKmVal = Number(vehicle.currentKm || 0);
+          let lastServiceKm = Math.max(proposedKm || 0, currentKmVal);
+
+          // Prevent regression below a previously recorded service (if any)
+          const prevRecorded = Number(vehicle.previousServiceKm || 0);
+          if (prevRecorded > 0 && lastServiceKm < prevRecorded) {
+            // If provided km is less than previous recorded service, clamp to previous recorded value
+            lastServiceKm = prevRecorded;
+            console.warn(`Service km ${proposedKm} is less than previously recorded service km ${prevRecorded}; clamping to previous.`);
+          }
+
+          vehicle.serviceHistory = vehicle.serviceHistory || [];
+          vehicle.serviceHistory.push({ km: lastServiceKm, date: request.completedDate || new Date(), notes: request.description || request.remarks || '', performedBy: request.approvedBy || null });
+
+          // Update previousServiceKm so virtuals compute nextServiceKm = previousServiceKm + serviceIntervalKm
+          vehicle.previousServiceKm = lastServiceKm;
+
+          // If the service reading is ahead of stored currentKm, update the vehicle's currentKm to keep values consistent
+          if (lastServiceKm > currentKmVal) {
+            vehicle.currentKm = lastServiceKm;
+          }
+
+        }
         await vehicle.save();
       }
       if (status === 'rejected') {
@@ -301,9 +331,32 @@ const updateMaintenance = async (req, res) => {
       }
     }
 
+    // compute next service info if we updated the vehicle above
+    let nextServiceInfo = null;
+    try {
+      const vehicleAfter = await Vehicle.findById(request.vehicleId);
+      if (vehicleAfter) {
+        const last = Number(vehicleAfter.previousServiceKm || vehicleAfter.initialKm || 0);
+        const interval = Number(vehicleAfter.serviceIntervalKm || 0);
+        if (interval > 0) {
+          const nextKm = last + interval;
+          const currentKmVal = Number(vehicleAfter.currentKm || 0);
+          nextServiceInfo = {
+            lastServiceKm: last,
+            nextServiceKm: nextKm,
+            kilometersUntilNextService: nextKm - currentKmVal,
+          };
+        }
+      }
+    } catch (e) {
+      // ignore errors computing next service info
+      console.error('Error computing next service info:', e.message);
+    }
+
     return res.status(200).json({
             message: status ? `Maintenance request has been ${status}.` : 'Maintenance request updated.',
-           request
+           request,
+           nextServiceInfo
         });
   } catch (err) {
     console.error("Error updating maintenance request:", err);
