@@ -369,23 +369,34 @@ const Vehicles = () => {
         th, td { border:1px solid #e5e7eb; padding:8px; text-align:left; font-size:13px }
         th { background:#f9fafb; font-weight:600 }
         .section-title { margin-top:18px; font-weight:700 }
+        .no-wrap { white-space: nowrap; }
       `;
 
       const escape = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const formatDate = (val) => {
+        if (!val) return '';
+        try {
+          const d = new Date(val);
+          if (isNaN(d)) return String(val);
+          return d.toLocaleDateString();
+        } catch (e) {
+          return String(val);
+        }
+      };
 
       const maintRows = (historyVehicle.maintenance || []).map(i => `
         <tr>
           <td>${escape(i._id)}</td>
-          <td>${escape(historyVehicle.manufacturer)} ${escape(historyVehicle.model)}</td>
-          <td>${escape(historyVehicle.plateNumber)}</td>
+          <td class="no-wrap">${escape(historyVehicle.manufacturer)} ${escape(historyVehicle.model)}</td>
+          <td class="no-wrap">${escape(historyVehicle.plateNumber)}</td>
           <td>${escape(i.category)}</td>
           <td>${escape(i.description || i.notes)}</td>
           <td>${escape(i.priority)}</td>
           <td>${escape(i.requestedBy?.fullName || i.requestedBy || i.requester)}</td>
           <td>${escape(i.approvedBy?.fullName || i.approvedBy)}</td>
           <td>${escape(i.status)}</td>
-          <td>${escape(i.requestedDate || i.createdAt)}</td>
-          <td>${escape(i.completedDate || '')}</td>
+          <td>${escape(formatDate(i.requestedDate || i.createdAt))}</td>
+          <td>${escape(formatDate(i.completedDate || ''))}</td>
           <td>${escape(i.cost != null ? i.cost : '')}</td>
           <td>${escape(i.remarks || '')}</td>
         </tr>
@@ -394,8 +405,8 @@ const Vehicles = () => {
       const fuelRows = (historyVehicle.fuel || []).map(i => `
         <tr>
           <td>${escape(i._id)}</td>
-          <td>${escape(historyVehicle.manufacturer)} ${escape(historyVehicle.model)}</td>
-          <td>${escape(historyVehicle.plateNumber)}</td>
+          <td class="no-wrap">${escape(historyVehicle.manufacturer)} ${escape(historyVehicle.model)}</td>
+          <td class="no-wrap">${escape(historyVehicle.plateNumber)}</td>
           <td>${escape(i.fuelType)}</td>
           <td>${escape(i.quantity ?? '')}</td>
           <td>${escape(i.pricePerLitre ?? '')}</td>
@@ -405,8 +416,8 @@ const Vehicles = () => {
           <td>${escape(i.requestedBy?.fullName || i.requestedBy || i.requester)}</td>
           <td>${escape(i.approvedBy?.fullName || i.approvedBy)}</td>
           <td>${escape(i.status)}</td>
-          <td>${escape(i.createdAt || '')}</td>
-          <td>${escape(i.issuedDate || '')}</td>
+          <td>${escape(formatDate(i.createdAt || ''))}</td>
+          <td>${escape(formatDate(i.issuedDate || ''))}</td>
         </tr>
       `).join('') || '<tr><td colspan="14">No fuel records</td></tr>';
 
