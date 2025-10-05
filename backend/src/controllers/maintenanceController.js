@@ -304,6 +304,15 @@ const updateMaintenance = async (req, res) => {
             vehicle.currentKm = lastServiceKm;
           }
 
+          // Persist the finalized service km onto the maintenance request itself so exports and clients
+          // that consume the request document can see the recorded serviced odometer.
+          try {
+            request.serviceKm = lastServiceKm;
+            await request.save();
+          } catch (e) {
+            console.error('Failed to persist serviceKm onto MaintenanceRequest:', e.message);
+          }
+
         }
         await vehicle.save();
       }

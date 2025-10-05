@@ -279,6 +279,12 @@ const Vehicles = () => {
     return found ? (found.fullName || found.username) : userOrId;
   };
 
+  const formatNumber = (val) => {
+    if (val === undefined || val === null || val === '') return '';
+    const n = Number(val);
+    if (isNaN(n)) return String(val);
+    return n.toLocaleString();
+  };
   const exportHistory = () => {
     if (!historyVehicle) return;
     try {
@@ -293,35 +299,80 @@ const Vehicles = () => {
         Status: historyVehicle.status || '',
       };
 
+      // Helper to resolve serviced KM from a maintenance record by falling back
+      // to service/maintenance history when necessary.
+      const resolveServiceKmForExport = (maint) => {
+        if (!maint) return '';
+        if (maint.serviceKm !== undefined && maint.serviceKm !== null && maint.serviceKm !== '') return maint.serviceKm;
+
+        const serviceEntries = [];
+        if (Array.isArray(historyVehicle.serviceHistory)) {
+          historyVehicle.serviceHistory.forEach(s => { if (s && s.date) serviceEntries.push(s); });
+        }
+        if (Array.isArray(historyVehicle.maintenanceHistory)) {
+          historyVehicle.maintenanceHistory.forEach(s => { if (s && s.date) serviceEntries.push(s); });
+        }
+
+        if (!serviceEntries.length) return '';
+
+        // Try to match by exact KM on entries
+        if (maint.serviceKm !== undefined && maint.serviceKm !== null && maint.serviceKm !== '') {
+          const exact = serviceEntries.find(s => s.km != null && Number(s.km) === Number(maint.serviceKm));
+          if (exact) return exact.km;
+        }
+
+        // Try date match within one day
+        const maintDate = maint.completedDate || maint.updatedAt || maint.requestedDate || maint.createdAt || null;
+        if (maintDate) {
+          const mTime = new Date(maintDate).getTime();
+          const dateMatch = serviceEntries.find(s => {
+            try { return Math.abs(new Date(s.date).getTime() - mTime) <= 24 * 60 * 60 * 1000; } catch (e) { return false; }
+          });
+          if (dateMatch) return dateMatch.km ?? '';
+        }
+
+        // Try substring match on notes/description
+        if (maint.description) {
+          const desc = String(maint.description).toLowerCase();
+          const textMatch = serviceEntries.find(s => (s.notes || '').toLowerCase().includes(desc) || desc.includes((s.notes || '').toLowerCase()));
+          if (textMatch) return textMatch.km ?? '';
+        }
+
+        return '';
+      };
+
       // Maintenance rows (map fields from maintenance objects)
-      const maintRows = (historyVehicle.maintenance || []).map(m => ({
-        RequestID: m._id || '',
-        PlateNumber: historyVehicle.plateNumber || '',
-        Category: m.category || '',
-        Description: m.description || m.notes || '',
-        ServiceKM: m.serviceKm ?? '',
-        Priority: m.priority || '',
-        Status: m.status || '',
-        RequestedBy: getUserName(m.requestedBy || m.requester),
-        ApprovedBy: getUserName(m.approvedBy),
-        CompletedDate: m.completedDate || m.approvedDate || m.requestedDate || m.createdAt || '',
-        Cost: m.cost != null ? m.cost : '',
-        Remarks: m.remarks || '',
-        CreatedAt: m.createdAt || '',
-      }));
+      const maintRows = (historyVehicle.maintenance || []).map(m => {
+        const resolvedKm = resolveServiceKmForExport(m);
+        return ({
+          RequestID: m._id || '',
+          PlateNumber: historyVehicle.plateNumber || '',
+          Category: m.category || '',
+          Description: m.description || m.notes || '',
+          ServiceKM: (resolvedKm !== undefined && resolvedKm !== null && resolvedKm !== '') ? formatNumber(resolvedKm) : (m.service?.km != null ? formatNumber(m.service.km) : ''),
+          Priority: m.priority || '',
+          Status: m.status || '',
+          RequestedBy: getUserName(m.requestedBy || m.requester),
+          ApprovedBy: getUserName(m.approvedBy),
+          CompletedDate: m.completedDate || m.approvedDate || m.requestedDate || m.createdAt || '',
+          Cost: m.cost != null ? formatNumber(m.cost) : '',
+          Remarks: m.remarks || '',
+          CreatedAt: m.createdAt || '',
+        });
+      });
 
       // Fuel rows
       const fuelRows = (historyVehicle.fuel || []).map(f => ({
         RequestID: f._id || '',
         PlateNumber: historyVehicle.plateNumber || '',
-        Quantity: f.quantity ?? '',
+  Quantity: f.quantity ?? '',
         FuelType: f.fuelType || '',
-        CurrentKM: f.currentKm ?? '',
+  CurrentKM: f.currentKm != null ? formatNumber(f.currentKm) : '',
         Status: f.status || '',
         RequestedBy: getUserName(f.requestedBy || f.requester),
         ApprovedBy: getUserName(f.approvedBy),
         IssuedDate: f.issuedDate || f.approvedDate || f.createdAt || '',
-        Cost: f.cost != null ? f.cost : '',
+  Cost: f.cost != null ? formatNumber(f.cost) : '',
         Purpose: f.purpose || '',
         CreatedAt: f.createdAt || '',
       }));
@@ -329,7 +380,7 @@ const Vehicles = () => {
       const wb = XLSX.utils.book_new();
 
       // Cover sheet (company template)
-  const companyName = 'ACME Fleet Services';
+      const companyName = 'ACME Fleet Services';
       const coverLines = [
         [companyName],
         [],
@@ -443,23 +494,77 @@ const Vehicles = () => {
         }
       };
 
-      const maintRows = (historyVehicle.maintenance || []).map(i => `
+      const formatNumber = (val) => {
+        if (val === undefined || val === null || val === '') return '';
+        const n = Number(val);
+        if (isNaN(n)) return String(val);
+        return n.toLocaleString();
+      };
+
+      // Resolve serviced km for a maintenance request by checking the request itself
+      // and falling back to vehicle service/maintenance history entries.
+      const resolveServiceKm = (maint) => {
+        if (!maint) return '';
+        if (maint.serviceKm !== undefined && maint.serviceKm !== null) return maint.serviceKm;
+
+        // Gather service entries from vehicle (serviceHistory and maintenanceHistory)
+        const serviceEntries = [];
+        if (Array.isArray(historyVehicle.serviceHistory)) {
+          historyVehicle.serviceHistory.forEach(s => { if (s && s.date) serviceEntries.push(s); });
+        }
+        if (Array.isArray(historyVehicle.maintenanceHistory)) {
+          historyVehicle.maintenanceHistory.forEach(s => { if (s && s.date) serviceEntries.push(s); });
+        }
+
+        if (!serviceEntries.length) return '';
+
+        // 1) try exact km match against any service entry
+        const kmMatch = serviceEntries.find(s => s.km != null && maint.serviceKm != null && Number(s.km) === Number(maint.serviceKm));
+        if (kmMatch) return kmMatch.km;
+
+        // 2) try to match by date within one day
+        const maintDate = maint.completedDate || maint.updatedAt || maint.requestedDate || maint.createdAt || null;
+        if (maintDate) {
+          const mTime = new Date(maintDate).getTime();
+          const dateMatch = serviceEntries.find(s => {
+            try {
+              const sTime = new Date(s.date).getTime();
+              return Math.abs(sTime - mTime) <= 24 * 60 * 60 * 1000;
+            } catch (e) { return false; }
+          });
+          if (dateMatch) return dateMatch.km ?? '';
+        }
+
+        // 3) try notes/description substring match
+        if (maint.description) {
+          const desc = String(maint.description).toLowerCase();
+          const textMatch = serviceEntries.find(s => (s.notes || '').toLowerCase().includes(desc) || desc.includes((s.notes || '').toLowerCase()));
+          if (textMatch) return textMatch.km ?? '';
+        }
+
+        return '';
+      };
+
+      const maintRows = (historyVehicle.maintenance || []).map(i => {
+        const resolvedKm = resolveServiceKm(i);
+        return `
         <tr>
           <td>${escape(i._id)}</td>
           <td class="no-wrap">${escape(historyVehicle.manufacturer)} ${escape(historyVehicle.model)}</td>
           <td class="no-wrap">${escape(historyVehicle.plateNumber)}</td>
           <td>${escape(i.category)}</td>
           <td>${escape(i.description || i.notes)}</td>
+          <td>${escape(formatNumber(resolvedKm ?? (i.service?.km ?? '')))}</td>
           <td>${escape(i.priority)}</td>
           <td>${escape(i.requestedBy?.fullName || i.requestedBy || i.requester)}</td>
           <td>${escape(i.approvedBy?.fullName || i.approvedBy)}</td>
           <td>${escape(i.status)}</td>
           <td>${escape(formatDate(i.requestedDate || i.createdAt))}</td>
           <td>${escape(formatDate(i.completedDate || ''))}</td>
-          <td>${escape(i.cost != null ? i.cost : '')}</td>
+          <td>${escape(i.cost != null ? formatNumber(i.cost) : '')}</td>
           <td>${escape(i.remarks || '')}</td>
         </tr>
-      `).join('') || '<tr><td colspan="13">No maintenance records</td></tr>';
+      `}).join('') || '<tr><td colspan="14">No maintenance records</td></tr>';
 
       const fuelRows = (historyVehicle.fuel || []).map(i => `
         <tr>
@@ -467,10 +572,10 @@ const Vehicles = () => {
           <td class="no-wrap">${escape(historyVehicle.manufacturer)} ${escape(historyVehicle.model)}</td>
           <td class="no-wrap">${escape(historyVehicle.plateNumber)}</td>
           <td>${escape(i.fuelType)}</td>
-          <td>${escape(i.quantity ?? '')}</td>
-          <td>${escape(i.pricePerLitre ?? '')}</td>
-          <td>${escape(i.cost != null ? i.cost : '')}</td>
-          <td>${escape(i.currentKm ?? '')}</td>
+          <td>${escape(i.quantity != null ? formatNumber(i.quantity) : '')}</td>
+          <td>${escape(i.pricePerLitre != null ? formatNumber(i.pricePerLitre) : '')}</td>
+          <td>${escape(i.cost != null ? formatNumber(i.cost) : '')}</td>
+          <td>${escape(i.currentKm != null ? formatNumber(i.currentKm) : '')}</td>
           <td>${escape(i.purpose || '')}</td>
           <td>${escape(i.requestedBy?.fullName || i.requestedBy || i.requester)}</td>
           <td>${escape(i.approvedBy?.fullName || i.approvedBy)}</td>
@@ -497,8 +602,8 @@ const Vehicles = () => {
             <table>
               <thead>
                 <tr>
-                  <th>Req ID</th><th>Vehicle</th><th>Plate</th><th>Category</th><th>Description</th><th>Priority</th>
-                  <th>Requested By</th><th>Approved By</th><th>Status</th><th>Requested</th><th>Completed</th><th>Cost</th><th>Remarks</th>
+                  <th>Req ID</th><th>Vehicle</th><th>Plate</th><th>Category</th><th>Description</th><th>Serviced KM</th><th>Priority</th>
+                    <th>Requested By</th><th>Approved By</th><th>Status</th><th>Requested</th><th>Completed</th><th>Cost</th><th>Remarks</th>
                 </tr>
               </thead>
               <tbody>${maintRows}</tbody>
@@ -936,6 +1041,7 @@ const Vehicles = () => {
                                       <div><strong>Category:</strong> {item.data.category || '—'}</div>
                                     </div>
                                     <div className="mt-1"><strong>Description:</strong> {item.data.description || item.data.notes || '—'}</div>
+                                    <div className="mt-1"><strong>Serviced KM:</strong> { (item.data.serviceKm !== undefined && item.data.serviceKm !== null) ? item.data.serviceKm : (item.data.service?.km ?? '—') }</div>
                                     <div className="mt-1"><strong>Cost:</strong> {item.data.cost != null ? `${item.data.cost}` : '—'}</div>
                                     <div className="mt-1 text-xs text-gray-500">Requested by: {item.data.requestedBy?.fullName || item.data.requestedBy?.username || item.data.requester || '—'}</div>
                                   </div>
