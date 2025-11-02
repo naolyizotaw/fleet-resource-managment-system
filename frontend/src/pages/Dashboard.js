@@ -129,16 +129,16 @@ const Dashboard = () => {
     }
   };
 
-  const typeIcon = (type) => {
+  const typeIcon = (type, size = 'w-5 h-5') => {
     switch (type) {
       case 'fuel':
-        return <Fuel className="h-5 w-5 text-purple-600" />;
+        return <Fuel className={`${size} text-purple-600 group-hover:text-white transition-colors`} />;
       case 'maintenance':
-        return <Wrench className="h-5 w-5 text-yellow-600" />;
+        return <Wrench className={`${size} text-yellow-600 group-hover:text-white transition-colors`} />;
       case 'perdiem':
-        return <Receipt className="h-5 w-5 text-indigo-600" />;
+        return <Receipt className={`${size} text-indigo-600 group-hover:text-white transition-colors`} />;
       default:
-        return <FileText className="h-5 w-5 text-gray-500" />;
+        return <FileText className={`${size} text-gray-500 group-hover:text-white transition-colors`} />;
     }
   };
 
@@ -223,94 +223,127 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold">Loading Dashboard...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-  <p className="text-gray-600">Welcome back, {user.fullName || user.username}! Here's what's happening today.</p>
+    <div className="space-y-8">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl p-8 text-white shadow-lg">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-px w-12 bg-white/30"></div>
+              <span className="text-xs uppercase tracking-widest font-bold text-white/80">Dashboard Overview</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tight mb-2">
+              Welcome Back
+            </h1>
+            <p className="text-xl text-white/90 font-semibold">
+              {user.fullName || user.username}
+            </p>
+            <p className="text-white/70 mt-1">Here's what's happening today</p>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-sm font-bold uppercase tracking-wide">Active</span>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {user.role === 'admin' && (
-          <div className="card">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="h-6 w-6 text-blue-600" />
+          <div className="group relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden">
+            <div className="absolute top-0 right-0 w-0 h-1 bg-primary-600 group-hover:w-full transition-all duration-500"></div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Total Users</p>
+                <p className="text-4xl font-black text-gray-900 mb-1">{stats.totalUsers}</p>
+                <p className="text-xs text-gray-400">Active members</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Users</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+              <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:scale-110 transition-all">
+                <Users className="h-8 w-8 text-blue-600 group-hover:text-white transition-colors" />
               </div>
             </div>
           </div>
         )}
 
         {(user.role === 'admin' || user.role === 'manager') && (
-          <div className="card">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Truck className="h-6 w-6 text-green-600" />
+          <div className="group relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden">
+            <div className="absolute top-0 right-0 w-0 h-1 bg-primary-600 group-hover:w-full transition-all duration-500"></div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Total Vehicles</p>
+                <p className="text-4xl font-black text-gray-900 mb-1">{stats.totalVehicles}</p>
+                <p className="text-xs text-gray-400">In fleet</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Vehicles</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalVehicles}</p>
+              <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-green-600 group-hover:scale-110 transition-all">
+                <Truck className="h-8 w-8 text-green-600 group-hover:text-white transition-colors" />
               </div>
             </div>
           </div>
         )}
 
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Wrench className="h-6 w-6 text-yellow-600" />
+        <div className="group relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden">
+          <div className="absolute top-0 right-0 w-0 h-1 bg-primary-600 group-hover:w-full transition-all duration-500"></div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Pending Maintenance</p>
+              <p className="text-4xl font-black text-gray-900 mb-1">{stats.pendingMaintenance}</p>
+              <p className="text-xs text-gray-400">Awaiting approval</p>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Pending Maintenance</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.pendingMaintenance}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Fuel className="h-6 w-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Pending Fuel</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.pendingFuel}</p>
+            <div className="w-16 h-16 bg-yellow-100 rounded-xl flex items-center justify-center group-hover:bg-yellow-600 group-hover:scale-110 transition-all">
+              <Wrench className="h-8 w-8 text-yellow-600 group-hover:text-white transition-colors" />
             </div>
           </div>
         </div>
 
-        <div className="card">
-          <div className="flex items-center">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <Receipt className="h-6 w-6 text-indigo-600" />
+        <div className="group relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden">
+          <div className="absolute top-0 right-0 w-0 h-1 bg-primary-600 group-hover:w-full transition-all duration-500"></div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Pending Fuel</p>
+              <p className="text-4xl font-black text-gray-900 mb-1">{stats.pendingFuel}</p>
+              <p className="text-xs text-gray-400">Requests pending</p>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Pending Per Diem</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.pendingPerDiem}</p>
+            <div className="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center group-hover:bg-purple-600 group-hover:scale-110 transition-all">
+              <Fuel className="h-8 w-8 text-purple-600 group-hover:text-white transition-colors" />
+            </div>
+          </div>
+        </div>
+
+        <div className="group relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden">
+          <div className="absolute top-0 right-0 w-0 h-1 bg-primary-600 group-hover:w-full transition-all duration-500"></div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Pending Per Diem</p>
+              <p className="text-4xl font-black text-gray-900 mb-1">{stats.pendingPerDiem}</p>
+              <p className="text-xs text-gray-400">Awaiting review</p>
+            </div>
+            <div className="w-16 h-16 bg-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:scale-110 transition-all">
+              <Receipt className="h-8 w-8 text-indigo-600 group-hover:text-white transition-colors" />
             </div>
           </div>
         </div>
 
         {user.role === 'user' && (
-          <div className="card">
-            <div className="flex items-center">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <FileText className="h-6 w-6 text-gray-600" />
+          <div className="group relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden">
+            <div className="absolute top-0 right-0 w-0 h-1 bg-primary-600 group-hover:w-full transition-all duration-500"></div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Total Logs</p>
+                <p className="text-4xl font-black text-gray-900 mb-1">{stats.totalLogs}</p>
+                <p className="text-xs text-gray-400">Trip records</p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Logs</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalLogs}</p>
+              <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-gray-800 group-hover:scale-110 transition-all">
+                <FileText className="h-8 w-8 text-gray-600 group-hover:text-white transition-colors" />
               </div>
             </div>
           </div>
@@ -318,40 +351,63 @@ const Dashboard = () => {
       </div>
 
       {/* Recent Requests */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Requests</h2>
-          <TrendingUp className="h-5 w-5 text-gray-400" />
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-px w-8 bg-primary-600"></div>
+              <span className="text-xs uppercase tracking-widest font-bold text-gray-500">Activity Feed</span>
+            </div>
+            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Recent Requests</h2>
+          </div>
+          <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
+            <TrendingUp className="h-6 w-6 text-primary-600" />
+          </div>
         </div>
         
         {recentRequests.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No recent requests found.</p>
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="h-8 w-8 text-gray-400" />
+            </div>
+            <p className="text-gray-500 font-semibold">No recent requests found</p>
+            <p className="text-sm text-gray-400 mt-1">Start by submitting a new request</p>
+          </div>
         ) : (
           <div className="space-y-3">
             {recentRequests.map((request) => (
               <button
                 key={`${request.type}-${request._id}`}
                 onClick={() => navigate(buildLinkWithHighlight(request))}
-                className="w-full text-left flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                className="group w-full text-left flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-primary-50 border-2 border-transparent hover:border-primary-200 transition-all"
               >
-                <div className="flex items-center space-x-3">
-                  {typeIcon(request.type)}
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                      {getRequestTypeLabel(request.type)} Request
-                      <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold rounded-full ${getStatusColor(request.status)}`}>
+                <div className="flex items-center space-x-4 flex-1">
+                  <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center group-hover:bg-primary-600 transition-all shadow-sm">
+                    {typeIcon(request.type)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                        {getRequestTypeLabel(request.type)} Request
+                      </p>
+                      <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black rounded-full uppercase tracking-wider ${getStatusColor(request.status)}`}>
                         {request.status}
                       </span>
-                    </p>
-                    <div className="text-xs text-gray-600 mt-0.5">{renderDetails(request)}</div>
-                    <div className="text-[11px] text-gray-400 mt-0.5">
+                      {request.priority && (
+                        <span className={`px-2.5 py-1 text-[10px] font-black rounded-full uppercase tracking-wider ${getPriorityBadgeColor(request.priority)}`}>
+                          {request.priority}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-600 font-medium mb-1">{renderDetails(request)}</div>
+                    <div className="text-[11px] text-gray-400 uppercase tracking-wide">
                       {timeAgo(request.createdAt)} · {new Date(request.createdAt).toLocaleString()}
                     </div>
                   </div>
                 </div>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityBadgeColor(request.priority)}`}>
-                  {request.priority || 'N/A'}
-                </span>
+                <div className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-primary-600 font-bold text-lg">→</span>
+                </div>
               </button>
             ))}
           </div>
@@ -359,20 +415,65 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="card">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-px w-8 bg-primary-600"></div>
+            <span className="text-xs uppercase tracking-widest font-bold text-gray-500">Get Started</span>
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Quick Actions</h2>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors duration-200">
-            <Wrench className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-900">Submit Maintenance Request</p>
+          <button 
+            onClick={() => navigate('/maintenance')}
+            className="group relative p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-600 hover:bg-gradient-to-br hover:from-primary-50 hover:to-white transition-all duration-300 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-primary-600 opacity-0 group-hover:opacity-5 transition-opacity"></div>
+            <div className="relative">
+              <div className="w-14 h-14 bg-yellow-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-yellow-600 group-hover:scale-110 transition-all">
+                <Wrench className="h-7 w-7 text-yellow-600 group-hover:text-white transition-colors" />
+              </div>
+              <p className="text-sm font-black text-gray-900 uppercase tracking-wide text-center group-hover:text-primary-600 transition-colors">
+                Submit Maintenance Request
+              </p>
+              <p className="text-xs text-gray-500 text-center mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                Request vehicle maintenance
+              </p>
+            </div>
           </button>
-          <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors duration-200">
-            <Fuel className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-900">Submit Fuel Request</p>
+          <button 
+            onClick={() => navigate('/fuel')}
+            className="group relative p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-600 hover:bg-gradient-to-br hover:from-primary-50 hover:to-white transition-all duration-300 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-primary-600 opacity-0 group-hover:opacity-5 transition-opacity"></div>
+            <div className="relative">
+              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-purple-600 group-hover:scale-110 transition-all">
+                <Fuel className="h-7 w-7 text-purple-600 group-hover:text-white transition-colors" />
+              </div>
+              <p className="text-sm font-black text-gray-900 uppercase tracking-wide text-center group-hover:text-primary-600 transition-colors">
+                Submit Fuel Request
+              </p>
+              <p className="text-xs text-gray-500 text-center mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                Request fuel refill
+              </p>
+            </div>
           </button>
-          <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors duration-200">
-            <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-900">Log Daily Trip</p>
+          <button 
+            onClick={() => navigate('/logs')}
+            className="group relative p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-600 hover:bg-gradient-to-br hover:from-primary-50 hover:to-white transition-all duration-300 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-primary-600 opacity-0 group-hover:opacity-5 transition-opacity"></div>
+            <div className="relative">
+              <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-indigo-600 group-hover:scale-110 transition-all">
+                <FileText className="h-7 w-7 text-indigo-600 group-hover:text-white transition-colors" />
+              </div>
+              <p className="text-sm font-black text-gray-900 uppercase tracking-wide text-center group-hover:text-primary-600 transition-colors">
+                Log Daily Trip
+              </p>
+              <p className="text-xs text-gray-500 text-center mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                Record your trip details
+              </p>
+            </div>
           </button>
         </div>
       </div>

@@ -4,7 +4,7 @@
 
 @layer base {
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Barlow', system-ui, sans-serif;
   }
   
   body {
@@ -63,5 +63,13 @@
 
   .form-label {
     @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+
+  button {
+    @apply text-left;
+  }
+
+  ul li button {
+    @apply w-full text-left;
   }
 }

@@ -21,6 +21,8 @@ const Maintenance = () => {
   const [requestToComplete, setRequestToComplete] = useState(null);
   const [completeForm, setCompleteForm] = useState({ cost: '', remarks: '' });
   const [highlightedId, setHighlightedId] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
   const rowRefs = useRef({});
   const location = useLocation();
   const navigate = useNavigate();
@@ -107,6 +109,10 @@ const Maintenance = () => {
       return () => clearTimeout(t);
     }
   }, [loading, requests, location.search, location.pathname, navigate]);
+
+  const formatNumber = (num) => {
+    return num?.toLocaleString() || '';
+  };
 
   const getUserDisplay = (u, fallbackId) => {
     // Prefer populated object if available (driver or driverId could be populated)
@@ -503,7 +509,7 @@ const Maintenance = () => {
                         {getStatusIcon(request.status)}
                       </div>
                       <div className="ml-3">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-gray-900 line-clamp-2 cursor-pointer hover:text-blue-600" onClick={() => { setSelectedRequest(request); setShowDetailModal(true); }}>
                           {request.description}
                         </div>
                         <div className="text-sm text-gray-500">
@@ -511,7 +517,7 @@ const Maintenance = () => {
                         </div>
                         {request.estimatedCost && (
                           <div className="text-xs text-gray-400">
-                            Est. Cost: ${request.estimatedCost}
+                            Est. Cost: ETB {formatNumber(request.estimatedCost)}
                           </div>
                         )}
                       </div>
@@ -557,7 +563,7 @@ const Maintenance = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {request.cost !== undefined && request.cost !== null ? (`$${request.cost}`) : (request.estimatedCost ? `$${request.estimatedCost}` : '-')}
+                    {request.cost !== undefined && request.cost !== null ? (`ETB ${formatNumber(request.cost)}`) : (request.estimatedCost ? `ETB ${formatNumber(request.estimatedCost)}` : '-')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(request.status)}`}>
@@ -892,6 +898,113 @@ const Maintenance = () => {
                   className="px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
                 >
                   Mark Completed
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request Detail Modal */}
+      {showDetailModal && selectedRequest && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowDetailModal(false)} />
+            
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Maintenance Request Details
+                  </h3>
+                  <button
+                    onClick={() => setShowDetailModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <span className="sr-only">Close</span>
+                    ×
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Request ID</label>
+                      <p className="mt-1 text-sm text-gray-900">{selectedRequest._id}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Status</label>
+                      <p className="mt-1 text-sm text-gray-900 capitalize">{selectedRequest.status}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Vehicle</label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {(() => {
+                        const vehicle = resolveVehicle(selectedRequest);
+                        return vehicle ? `${vehicle.plateNumber || 'No Plate'} - ${vehicle.model || 'Unknown Model'}` : 'Unknown Vehicle';
+                      })()}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Category</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedRequest.category}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                    <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{selectedRequest.description}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Priority</label>
+                      <p className="mt-1 text-sm text-gray-900 capitalize">{selectedRequest.priority}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Estimated Cost</label>
+                      <p className="mt-1 text-sm text-gray-900">{selectedRequest.estimatedCost ? `ETB ${formatNumber(selectedRequest.estimatedCost)}` : 'Not specified'}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Requested By</label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {getUserDisplay(selectedRequest.requestedBy)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Notes</label>
+                    <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{selectedRequest.notes || 'No notes'}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Requested Date</label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {selectedRequest.requestedDate ? new Date(selectedRequest.requestedDate).toLocaleDateString() : 'Not specified'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Created At</label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {new Date(selectedRequest.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={() => setShowDetailModal(false)}
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Close
                 </button>
               </div>
             </div>

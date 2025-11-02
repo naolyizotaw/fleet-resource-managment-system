@@ -266,6 +266,10 @@ const FuelPage = () => {
     return typeof u === 'string' ? (u.slice ? `${u.slice(0,6)}…` : String(u)) : '-';
   };
 
+  const formatNumber = (num) => {
+    return num?.toLocaleString() || '';
+  };
+
   const filteredRequests = requests.filter(request => {
     const vehicleObj = resolveVehicle(request);
     const manufacturer = vehicleObj?.manufacturer || '';
@@ -436,7 +440,7 @@ const FuelPage = () => {
                   <td className="table-cell">
                     {typeof request.pricePerLitre === 'number' ? (
                       <span className="inline-flex items-center rounded-md bg-cyan-50 text-cyan-700 px-2 py-0.5 text-sm font-medium">
-                        ${request.pricePerLitre.toFixed(2)}/L
+                        ETB {formatNumber(request.pricePerLitre.toFixed(2))}/L
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">—</span>
@@ -445,7 +449,7 @@ const FuelPage = () => {
                   <td className="table-cell">
                     {typeof request.cost === 'number' ? (
                       <span className="inline-flex items-center rounded-md bg-emerald-50 text-emerald-700 px-2 py-0.5 text-sm font-semibold">
-                        ${request.cost.toFixed(2)}
+                        ETB {formatNumber(request.cost.toFixed(2))}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">—</span>
@@ -580,7 +584,15 @@ const FuelPage = () => {
                     <label className="block text-sm font-medium text-gray-700">Vehicle</label>
                     <select
                       value={formData.vehicleId}
-                      onChange={(e) => setFormData({...formData, vehicleId: e.target.value})}
+                      onChange={(e) => {
+                        const selectedVehicleId = e.target.value;
+                        const selectedVehicle = vehicles.find(v => v._id === selectedVehicleId);
+                        setFormData({
+                          ...formData, 
+                          vehicleId: selectedVehicleId,
+                          currentKm: selectedVehicle && !formData.currentKm ? selectedVehicle.currentKm : formData.currentKm
+                        });
+                      }}
                       className="input-field mt-1"
                       required
                     >
