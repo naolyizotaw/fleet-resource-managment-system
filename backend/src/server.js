@@ -11,6 +11,7 @@ const fuelRoutes = require('./routes/fuelRoutes');
 const perDiemRoutes = require('./routes/perDiemRoutes');
 const logRoutes = require('./routes/logRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const newsRoutes = require('./routes/newsRoutes');
 
 
 const app = express();
@@ -31,6 +32,7 @@ app.use('/api/fuel', fuelRoutes);
 app.use('/api/per-diem', perDiemRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/news', newsRoutes);
 
 
 //start server 

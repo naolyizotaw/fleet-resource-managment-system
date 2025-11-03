@@ -9,9 +9,13 @@ import {
   FileText, 
   Users, 
   TrendingUp,
-  
+  Megaphone,
+  UserPlus,
+  Calendar,
+  Award,
+  Newspaper,
 } from 'lucide-react';
-import { maintenanceAPI, fuelAPI, perDiemAPI, logsAPI, vehiclesAPI, usersAPI } from '../services/api';
+import { maintenanceAPI, fuelAPI, perDiemAPI, logsAPI, vehiclesAPI, usersAPI, newsAPI } from '../services/api';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -25,7 +29,9 @@ const Dashboard = () => {
     totalLogs: 0,
   });
   const [recentRequests, setRecentRequests] = useState([]);
+  const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [newsLoading, setNewsLoading] = useState(true);
 
   const fetchDashboardData = React.useCallback(async () => {
     try {
@@ -100,6 +106,23 @@ const Dashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  // Fetch news
+  const fetchNews = React.useCallback(async () => {
+    try {
+      setNewsLoading(true);
+      const response = await newsAPI.getRecent();
+      setNews(response.data.data || []);
+    } catch (error) {
+      console.error('Error fetching news:', error);
+    } finally {
+      setNewsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNews();
+  }, [fetchNews]);
 
   // status icon inline not used in the redesigned recent list
 
@@ -235,24 +258,72 @@ const Dashboard = () => {
   return (
     <div className="space-y-8">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl p-8 text-white shadow-lg">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-px w-12 bg-white/30"></div>
-              <span className="text-xs uppercase tracking-widest font-bold text-white/80">Dashboard Overview</span>
+      <div className="relative bg-gray-900 rounded-2xl shadow-2xl border border-gray-800 overflow-hidden">
+        {/* Dark gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black"></div>
+        
+        {/* Decorative shapes */}
+        <div className="absolute -right-16 -top-16 w-64 h-64 bg-gray-700/30 rounded-full blur-3xl"></div>
+        <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-gray-800/40 rounded-full blur-3xl"></div>
+        
+        {/* Subtle grid pattern overlay */}
+        <div className="absolute inset-0 opacity-10" style={{
+          backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
+          backgroundSize: '50px 50px'
+        }}></div>
+
+        <div className="relative p-8 md:p-10">
+          <div className="flex items-start justify-between flex-wrap gap-6">
+            <div className="flex-1 min-w-[280px]">
+              {/* Top badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800/60 backdrop-blur-sm rounded-full border border-gray-700/50 mb-4">
+                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+                <span className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-300">Dashboard Overview</span>
+              </div>
+
+              {/* Welcome message */}
+              <div className="mb-4">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-3 leading-none">
+                  Welcome Back,
+                  <span className="block mt-2 text-gray-300">{user.fullName || user.username}</span>
+                </h1>
+              </div>
+
+              {/* Info row */}
+              <div className="flex items-center gap-6 flex-wrap">
+                <div className="flex items-center gap-2 text-gray-400">
+                  <Users className="h-4 w-4" />
+                  <span className="text-sm font-semibold">{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-400">
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-sm font-semibold">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+                </div>
+              </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tight mb-2">
-              Welcome Back
-            </h1>
-            <p className="text-xl text-white/90 font-semibold">
-              {user.fullName || user.username}
-            </p>
-            <p className="text-white/70 mt-1">Here's what's happening today</p>
-          </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-            <span className="text-sm font-bold uppercase tracking-wide">Active</span>
+
+            {/* Right side - Status cards */}
+            <div className="flex flex-col gap-3">
+              {/* Active status */}
+              <div className="flex items-center gap-3 px-5 py-3 bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-700/50">
+                <div className="flex items-center justify-center w-10 h-10 bg-green-500/20 rounded-lg border border-green-500/30">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-black text-gray-400">System Status</p>
+                  <p className="text-sm font-black text-white uppercase">Online</p>
+                </div>
+              </div>
+
+              {/* Quick action button */}
+              <button 
+                onClick={() => navigate('/news')}
+                className="group flex items-center gap-3 px-5 py-3 bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/50 hover:bg-gray-700 hover:border-gray-600 transition-all"
+              >
+                <Newspaper className="h-5 w-5 text-gray-300 group-hover:text-white transition-colors" />
+                <span className="text-sm font-bold text-gray-300 group-hover:text-white transition-colors">View News</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -474,6 +545,163 @@ const Dashboard = () => {
                 Record your trip details
               </p>
             </div>
+          </button>
+        </div>
+      </div>
+
+      {/* News & Events Section */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-px w-8 bg-primary-600"></div>
+              <span className="text-xs uppercase tracking-widest font-bold text-gray-500">Latest Updates</span>
+            </div>
+            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">News & Events</h2>
+          </div>
+          <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
+            <Newspaper className="h-6 w-6 text-primary-600" />
+          </div>
+        </div>
+
+        {newsLoading ? (
+          <div className="py-8 text-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mx-auto mb-3"></div>
+            <p className="text-sm text-gray-500 font-semibold">Loading news...</p>
+          </div>
+        ) : news.length === 0 ? (
+          <div className="py-12 text-center text-gray-400">
+            <Newspaper className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p className="text-sm font-semibold">No news or events available</p>
+            <p className="text-xs mt-1">Check back later for updates</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {news.map((post) => {
+              const typeConfig = {
+                announcement: { 
+                  bgColor: 'from-primary-50 to-blue-50', 
+                  borderColor: 'border-primary-600', 
+                  iconBg: 'bg-primary-600', 
+                  badgeBg: 'bg-primary-600',
+                  icon: Megaphone 
+                },
+                employee: { 
+                  bgColor: 'from-green-50 to-emerald-50', 
+                  borderColor: 'border-green-600', 
+                  iconBg: 'bg-green-600', 
+                  badgeBg: 'bg-green-600',
+                  icon: UserPlus 
+                },
+                event: { 
+                  bgColor: 'from-purple-50 to-pink-50', 
+                  borderColor: 'border-purple-600', 
+                  iconBg: 'bg-purple-600', 
+                  badgeBg: 'bg-purple-600',
+                  icon: Calendar 
+                },
+                achievement: { 
+                  bgColor: 'from-yellow-50 to-orange-50', 
+                  borderColor: 'border-yellow-600', 
+                  iconBg: 'bg-yellow-600', 
+                  badgeBg: 'bg-yellow-600',
+                  icon: Award 
+                },
+                general: { 
+                  bgColor: 'from-gray-50 to-slate-50', 
+                  borderColor: 'border-gray-600', 
+                  iconBg: 'bg-gray-600', 
+                  badgeBg: 'bg-gray-600',
+                  icon: Newspaper 
+                },
+              };
+
+              const config = typeConfig[post.type] || typeConfig.general;
+              const IconComponent = config.icon;
+
+              const timeAgo = (date) => {
+                const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+                if (seconds < 60) return 'just now';
+                const minutes = Math.floor(seconds / 60);
+                if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+                const hours = Math.floor(minutes / 60);
+                if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+                const days = Math.floor(hours / 24);
+                if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+                return new Date(date).toLocaleDateString();
+              };
+
+              return (
+                <div key={post._id} className={`group relative bg-white rounded-2xl p-6 border border-gray-200 hover:border-primary-300 hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer`}
+                  onClick={() => navigate('/news')}>
+                  
+                  {/* Animated gradient bar at top */}
+                  <div className={`absolute top-0 left-0 right-0 h-1.5 ${config.iconBg} opacity-60 group-hover:opacity-100 transition-opacity`}></div>
+                  
+                  {/* Subtle background pattern */}
+                  <div className={`absolute -right-10 -top-10 w-40 h-40 bg-gradient-to-br ${config.bgColor} rounded-full opacity-20 group-hover:scale-110 transition-transform duration-500`}></div>
+                  
+                  <div className="relative flex items-start gap-5">
+                    {/* Icon with animated ring */}
+                    <div className="relative flex-shrink-0">
+                      <div className={`absolute inset-0 ${config.iconBg} rounded-xl opacity-20 blur-md group-hover:blur-lg transition-all`}></div>
+                      <div className={`relative w-14 h-14 ${config.iconBg} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:-rotate-6 transition-all duration-300`}>
+                        <IconComponent className="h-7 w-7 text-white" />
+                      </div>
+                      {/* Pulse ring animation */}
+                      <div className={`absolute inset-0 ${config.iconBg} rounded-xl opacity-0 group-hover:opacity-30 group-hover:scale-125 transition-all duration-500`}></div>
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      {/* Header with badge and time */}
+                      <div className="flex items-center gap-3 mb-3 flex-wrap">
+                        <span className={`px-3 py-1.5 ${config.badgeBg} text-white text-[9px] font-black uppercase tracking-[0.15em] rounded-full shadow-sm`}>
+                          {post.type}
+                        </span>
+                        <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                          <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                          <span className="font-medium">{timeAgo(post.createdAt)}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Title with gradient on hover */}
+                      <h3 className="text-base font-black text-gray-900 mb-2.5 leading-tight group-hover:text-primary-600 transition-colors line-clamp-2">
+                        {post.title}
+                      </h3>
+                      
+                      {/* Content with fade effect */}
+                      <p className="text-sm text-gray-600 leading-relaxed mb-3 line-clamp-2">
+                        {post.content}
+                      </p>
+                      
+                      {/* Event date badge */}
+                      {post.eventDate && (
+                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r ${config.bgColor} rounded-lg text-xs font-bold text-gray-700 border border-gray-200`}>
+                          <Calendar className="h-3.5 w-3.5" />
+                          <span>{new Date(post.eventDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        </div>
+                      )}
+                      
+                      {/* Read more indicator */}
+                      <div className="flex items-center gap-2 mt-4 text-xs font-bold text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="uppercase tracking-wide">Read More</span>
+                        <span className="transform group-hover:translate-x-1 transition-transform">→</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* View All Link */}
+        <div className="mt-6 pt-4 border-t border-gray-200 text-center">
+          <button 
+            onClick={() => navigate('/news')}
+            className="text-sm font-bold text-primary-600 hover:text-primary-700 uppercase tracking-wide hover:underline transition-colors"
+          >
+            View All News & Events →
           </button>
         </div>
       </div>

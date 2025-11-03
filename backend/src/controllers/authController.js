@@ -1,4 +1,5 @@
 const User = require("../models/userModel");
+const News = require("../models/newsModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -9,14 +10,44 @@ const jwt = require("jsonwebtoken");
 //@access public
 const register = async (req, res) => {
     try {
-    const { fullName, username, password, role } = req.body;
+    const { fullName, username, password, role, email, phone, department, status } = req.body;
 
     //hashed password 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // create new user and save it to database 
-    const newUser = new User({ fullName, username, password: hashedPassword, role});
+    const newUser = new User({ 
+        fullName, 
+        username, 
+        password: hashedPassword, 
+        role,
+        email: email || undefined,
+        phone: phone || undefined,
+        department: department || undefined,
+        status: status || 'active'
+    });
     await newUser.save();
+
+    // Automatically create a news post for new employee
+    try {
+        const adminId = req.user?.id || newUser._id; // Use admin who created the user, or the user themselves as fallback
+        const roleDisplay = role.charAt(0).toUpperCase() + role.slice(1);
+        const departmentText = department ? ` in the ${department} department` : '';
+        
+        const newsPost = new News({
+            title: `New Employee: ${fullName}`,
+            content: `We're excited to welcome ${fullName} (${username}) to our team as a ${roleDisplay}${departmentText}. Please join us in welcoming our new team member!`,
+            type: 'employee',
+            priority: 'medium',
+            isActive: true,
+            createdBy: adminId,
+        });
+        await newsPost.save();
+    } catch (newsError) {
+        // Don't fail user registration if news post creation fails
+        console.error('Error creating news post for new employee:', newsError);
+    }
+
     res.status(201).json({message: `User registerd with username: ${username}`});
 
     } catch (err) {

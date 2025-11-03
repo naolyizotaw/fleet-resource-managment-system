@@ -14,6 +14,7 @@ import Fuel from './pages/Fuel';
 import PerDiem from './pages/PerDiem';
 import Logs from './pages/Logs';
 import Reports from './pages/Reports';
+import News from './pages/News';
 import Settings from './pages/Settings';
 
 function AppRoutes() {
@@ -59,7 +60,9 @@ function AppRoutes() {
             <Reports />
           </ProtectedRoute>
         } />
-  <Route path="/settings" element={<Settings />} />
+        
+        <Route path="/news" element={<News />} />
+        <Route path="/settings" element={<Settings />} />
         
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

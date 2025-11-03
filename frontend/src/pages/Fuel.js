@@ -302,78 +302,126 @@ const FuelPage = () => {
           </div>
         </div>
       )}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Fuel Requests</h1>
-          <p className="text-gray-600">Manage fuel requests and approvals</p>
+      {/* Page Header */}
+      <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-xl shadow-xl border border-slate-700 overflow-hidden px-6 py-4">
+        {/* Top label */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-1 h-1 bg-primary-500 rounded-full"></div>
+          <span className="text-[9px] uppercase tracking-[0.15em] font-black text-slate-400">Fuel Management Dashboard</span>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center space-x-2"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Request</span>
-        </button>
+        
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight mb-1">
+              Fuel Requests
+            </h1>
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-slate-400 font-semibold">Live Data</span>
+              </div>
+              <div className="w-px h-3 bg-slate-600"></div>
+              <span className="text-slate-400 font-semibold">Real-time Analytics</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowModal(true)}
+              className="group relative px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold uppercase tracking-wide rounded-lg transition-all flex items-center gap-2 border border-slate-600"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="text-xs">New Request</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Filters and Search */}
-      <div className="card">
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
+            <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search fuel requests..."
+                placeholder="Search by vehicle, plate, or requester..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-10"
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
               />
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="input-field"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
+          <div className="md:w-64">
+            <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Filter Status</label>
+            <div className="relative">
+              <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all appearance-none cursor-pointer"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Requests Table */}
-      <div className="card">
+      <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-lg border border-primary-100 overflow-hidden">
+        {/* Table Header */}
+        <div className="relative bg-white px-6 py-6 border-b-4 border-primary-600">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-600 via-primary-500 to-primary-600"></div>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary-600 rounded-xl blur opacity-30"></div>
+                <div className="relative w-12 h-12 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg">
+                  <FuelIcon className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Fuel Requests</h3>
+                <p className="text-xs text-gray-500 font-bold mt-0.5">Manage and track all fuel requests</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-2 bg-primary-50 rounded-lg border border-primary-200">
+              <div className="w-2 h-2 bg-primary-600 rounded-full animate-pulse"></div>
+              <span className="text-sm font-black text-primary-700">{filteredRequests.length} Total</span>
+            </div>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-                <tr>
-                <th className="table-header">Request</th>
-                <th className="table-header w-64">Vehicle</th>
-                <th className="table-header w-40">Plate Number</th>
-                <th className="table-header">Fuel Type</th>
-                <th className="table-header">Quantity (L)</th>
-                <th className="table-header">Price/L</th>
-                <th className="table-header">Total Cost</th>
-                <th className="table-header">Odometer (KM)</th>
-                <th className="table-header">Purpose</th>
-                <th className="table-header w-48">Requester</th>
-                <th className="table-header w-56">Approval</th>
-                <th className="table-header">Status</th>
-                <th className="table-header">Actions</th>
+          <table className="min-w-full">
+            <thead>
+                <tr className="bg-gradient-to-r from-gray-50 to-primary-50/50">
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Request</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] w-64 border-b-2 border-primary-200">Vehicle</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] w-40 border-b-2 border-primary-200">Plate Number</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Fuel Type</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Quantity (L)</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Price/L (ETB)</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Total Cost (ETB)</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Odometer (KM)</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Purpose</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] w-48 border-b-2 border-primary-200">Requester</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] w-56 border-b-2 border-primary-200">Approval</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Status</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white/80 backdrop-blur-sm">
               {filteredRequests.map((request) => (
                 <tr
                   key={request._id}
                   ref={(el) => { if (el) rowRefs.current[request._id] = el; }}
-                  className={`hover:bg-gray-50 ${highlightedId === request._id ? 'bg-yellow-50 ring-2 ring-amber-400' : ''}`}
+                  className={`group hover:bg-primary-50 hover:shadow-sm transition-all border-b border-gray-100 ${highlightedId === request._id ? 'bg-yellow-50 ring-2 ring-amber-400' : ''}`}
                 >
                   <td className="table-cell">
                     <div className="flex items-center">
@@ -440,7 +488,7 @@ const FuelPage = () => {
                   <td className="table-cell">
                     {typeof request.pricePerLitre === 'number' ? (
                       <span className="inline-flex items-center rounded-md bg-cyan-50 text-cyan-700 px-2 py-0.5 text-sm font-medium">
-                        ETB {formatNumber(request.pricePerLitre.toFixed(2))}/L
+                        {formatNumber(request.pricePerLitre.toFixed(2))}/L
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">—</span>
@@ -449,7 +497,7 @@ const FuelPage = () => {
                   <td className="table-cell">
                     {typeof request.cost === 'number' ? (
                       <span className="inline-flex items-center rounded-md bg-emerald-50 text-emerald-700 px-2 py-0.5 text-sm font-semibold">
-                        ETB {formatNumber(request.cost.toFixed(2))}
+                        {formatNumber(request.cost.toFixed(2))}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-400">—</span>
@@ -554,10 +602,12 @@ const FuelPage = () => {
         </div>
 
         {filteredRequests.length === 0 && (
-          <div className="text-center py-8">
-            <FuelIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No fuel requests found</h3>
-            <p className="mt-1 text-sm text-gray-500">
+          <div className="text-center py-16 px-4">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-2xl mb-4">
+              <FuelIcon className="h-10 w-10 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-2">No fuel requests found</h3>
+            <p className="text-sm text-gray-500 font-medium">
               {searchTerm || statusFilter !== 'all' 
                 ? 'Try adjusting your search or filter criteria.'
                 : 'Get started by creating a new fuel request.'

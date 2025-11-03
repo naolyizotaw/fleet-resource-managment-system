@@ -103,4 +103,15 @@ export const logsAPI = {
   delete: (id) => api.delete(`/api/logs/${id}`),
 };
 
+// News API
+export const newsAPI = {
+  getAll: (params) => api.get('/api/news', { params }),
+  getRecent: () => api.get('/api/news/recent'),
+  getById: (id) => api.get(`/api/news/${id}`),
+  create: (newsData) => api.post('/api/news', newsData),
+  update: (id, newsData) => api.put(`/api/news/${id}`, newsData),
+  toggleActive: (id) => api.patch(`/api/news/${id}/toggle`),
+  delete: (id) => api.delete(`/api/news/${id}`),
+};
+
 export default api;

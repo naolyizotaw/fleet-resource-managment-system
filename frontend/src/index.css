@@ -72,4 +72,11 @@
   ul li button {
     @apply w-full text-left;
   }
+
+  .dot-pattern-bg {
+    background-color: #faf8f3;
+    background-image: radial-gradient(circle, rgba(139, 116, 88, 0.12) 1px, transparent 1px);
+    background-size: 28px 28px;
+    background-position: 0 0;
+  }
 }

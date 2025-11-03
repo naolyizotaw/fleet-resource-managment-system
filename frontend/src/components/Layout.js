@@ -18,6 +18,7 @@ import {
   Bell,
   ChevronDown,
   TrendingUp,
+  Newspaper,
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -277,6 +278,7 @@ const Layout = ({ children }) => {
 
   const navigationItems = [
     { name: 'Dashboard', href: '/dashboard', icon: Home, roles: ['admin', 'manager', 'user'] },
+    { name: 'News', href: '/news', icon: Newspaper, roles: ['admin', 'manager', 'user'] },
     { name: 'Users', href: '/users', icon: Users, roles: ['admin'] },
     { name: 'Vehicles', href: '/vehicles', icon: Truck, roles: ['admin', 'manager'] },
     { name: 'Maintenance', href: '/maintenance', icon: Wrench, roles: ['admin', 'manager', 'user'] },
@@ -346,7 +348,7 @@ const Layout = ({ children }) => {
             <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Main</span>
           </div>
           <div className="space-y-1.5">
-            {filteredNavigation.filter(i => ['Dashboard','Reports'].includes(i.name)).map(item => {
+            {filteredNavigation.filter(i => ['Dashboard','News','Reports'].includes(i.name)).map(item => {
               const isActive = location.pathname === item.href;
               return (
                 <Link 
@@ -377,7 +379,39 @@ const Layout = ({ children }) => {
             <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Management</span>
           </div>
           <div className="space-y-1.5">
-            {filteredNavigation.filter(i => ['Users','Vehicles','Maintenance','Fuel','Per Diem','Logs','Settings'].includes(i.name)).map(item => {
+            {filteredNavigation.filter(i => ['Users','Vehicles','Maintenance','Fuel','Per Diem','Logs'].includes(i.name)).map(item => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link 
+                  key={item.name} 
+                  to={item.href} 
+                  onClick={() => setSidebarOpen(false)} 
+                  className={`group relative flex items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-4'} py-3 rounded-xl transition-all ${
+                    isActive 
+                      ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg' 
+                      : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {isActive && !collapsed && (
+                    <div className="absolute left-0 w-1 h-8 bg-white rounded-r-full"></div>
+                  )}
+                  <item.icon className={`h-5 w-5 ${isActive ? 'scale-110' : 'group-hover:scale-110'} transition-transform`} />
+                  <span className={`${collapsed ? 'hidden' : 'font-bold text-sm'}`}>{item.name}</span>
+                  {isActive && !collapsed && (
+                    <div className="ml-auto w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Settings in separate section */}
+          <div className={`${collapsed ? 'hidden' : 'mb-3 mt-6 px-3 flex items-center gap-2'}`}>
+            <div className="w-1 h-1 bg-primary-500 rounded-full"></div>
+            <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Account</span>
+          </div>
+          <div className="space-y-1.5">
+            {filteredNavigation.filter(i => ['Settings'].includes(i.name)).map(item => {
               const isActive = location.pathname === item.href;
               return (
                 <Link 
@@ -690,7 +724,7 @@ const Layout = ({ children }) => {
         </div>
 
         {/* Page content */}
-        <main className="p-6 flex-1 overflow-y-auto">
+        <main className="p-6 flex-1 overflow-y-auto dot-pattern-bg">
           {children}
         </main>
       </div>
