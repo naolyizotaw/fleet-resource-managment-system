@@ -692,84 +692,145 @@ const Vehicles = () => {
           </div>
         </div>
       )}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vehicles Management</h1>
-          <p className="text-gray-600">Manage fleet vehicles and driver assignments</p>
+
+      {/* Page Header */}
+      <div className="relative bg-gradient-to-br from-purple-600 via-primary-600 to-blue-600 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="absolute inset-0 opacity-10" style={{
+          backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+          backgroundSize: '30px 30px'
+        }}></div>
+        
+        <div className="relative px-8 py-8">
+          <div className="flex items-center justify-between flex-wrap gap-6">
+            <div className="flex items-center gap-5">
+              <div className="relative">
+                <div className="absolute inset-0 bg-white rounded-2xl blur-xl opacity-30"></div>
+                <div className="relative w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border-2 border-white/30 shadow-2xl">
+                  <Truck className="h-8 w-8 text-white" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-px w-10 bg-white/40"></div>
+                  <span className="text-[10px] uppercase tracking-[0.15em] font-black text-white/70">Fleet Management</span>
+                </div>
+                <h1 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tight mb-1">
+                  Vehicles Management
+                </h1>
+                <p className="text-white/80 font-semibold text-sm">Manage fleet vehicles and driver assignments</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={openAddModal}
+                className="group relative px-6 py-3 bg-white text-primary-600 font-black uppercase tracking-wide rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2 overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-primary-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <Plus className="h-5 w-5 relative z-10" />
+                <span className="text-sm relative z-10">Add Vehicle</span>
+              </button>
+              
+              <div className="flex items-center justify-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                <Truck className="h-4 w-4 text-white" />
+                <span className="text-sm font-bold text-white">{filteredVehicles.length} Total Vehicles</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={openAddModal}
-          className="btn-primary flex items-center space-x-2"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add Vehicle</span>
-        </button>
       </div>
 
-      <div className="card">
+      {/* Filters and Search */}
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
+            <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Search Vehicles</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search by plate, model, manufacturer..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-10"
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
               />
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="input-field"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="under_maintenance">Under Maintenance</option>
-              <option value="inactive">Inactive</option>
-            </select>
+          <div className="md:w-64">
+            <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Filter Status</label>
+            <div className="relative">
+              <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all appearance-none cursor-pointer"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="under_maintenance">Under Maintenance</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="card">
+      {/* Vehicles Table */}
+      <div className="bg-white rounded-2xl shadow-xl border-2 border-purple-100 overflow-hidden">
+        {/* Table Header with Colorful Accent */}
+        <div className="relative bg-gradient-to-r from-white via-purple-50 to-white px-6 py-6 border-b-4 border-purple-500">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-purple-600 via-primary-600 to-blue-600"></div>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-600 to-primary-600 rounded-xl blur opacity-30"></div>
+                <div className="relative w-12 h-12 bg-gradient-to-br from-purple-600 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Truck className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Fleet Vehicles</h3>
+                <p className="text-xs text-purple-600 font-bold mt-0.5">Vehicle management and assignments</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="table-header">Vehicle</th>
-                <th className="table-header">Plate #</th>
-                <th className="table-header">Driver</th>
-                <th className="table-header">Status</th>
-                <th className="table-header">Current KM</th>
-                <th className="table-header">Service Interval</th>
-                <th className="table-header">Next Service</th>
-                <th className="table-header">KM to Service</th>
-                <th className="table-header">Fuel Type</th>
-                <th className="table-header">Actions</th>
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gradient-to-r from-purple-50 via-primary-50 to-blue-50">
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-700 uppercase tracking-[0.1em] border-b-2 border-purple-200">Vehicle</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-700 uppercase tracking-[0.1em] border-b-2 border-purple-200">Plate #</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-700 uppercase tracking-[0.1em] border-b-2 border-purple-200">Driver</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-700 uppercase tracking-[0.1em] border-b-2 border-purple-200">Status</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-700 uppercase tracking-[0.1em] border-b-2 border-purple-200">Current KM</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-700 uppercase tracking-[0.1em] border-b-2 border-purple-200">Service Interval</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-700 uppercase tracking-[0.1em] border-b-2 border-purple-200">Next Service</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-700 uppercase tracking-[0.1em] border-b-2 border-purple-200">KM to Service</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-700 uppercase tracking-[0.1em] border-b-2 border-purple-200">Fuel Type</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-700 uppercase tracking-[0.1em] border-b-2 border-purple-200">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white/90">
               {filteredVehicles.map((vehicle) => (
-                <tr key={vehicle._id} className="hover:bg-gray-50">
+                <tr key={vehicle._id} className="group hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-blue-50/50 transition-all border-b border-gray-100">
                   <td className="table-cell">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
                         <Truck className="h-4 w-4 text-primary-600" />
                       </div>
                       <div className="ml-3">
                         <div className="text-sm font-medium text-gray-900">
                           {vehicle.year} {vehicle.manufacturer} {vehicle.model}
                         </div>
-                        <div className="text-sm text-gray-500">{vehicle.type}</div>
+                        <div className="text-xs text-gray-500">{vehicle.type}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="table-cell whitespace-nowrap">{vehicle.plateNumber}</td>
+                  <td className="table-cell whitespace-nowrap">
+                    <span className="text-sm font-medium text-gray-900">{vehicle.plateNumber}</span>
+                  </td>
                   <td className="table-cell max-w-[180px]">
                     {vehicle.assignedDriver ? (
                       <div className="flex items-center min-w-0">
@@ -787,18 +848,30 @@ const Vehicles = () => {
                       {vehicle.status.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="table-cell">{vehicle.currentKm?.toLocaleString()} km</td>
-                  <td className="table-cell">{(vehicle.serviceIntervalKm ?? 5000).toLocaleString()} km</td>
                   <td className="table-cell">
-                    {vehicle.serviceInfo?.nextServiceKm ? `${vehicle.serviceInfo.nextServiceKm.toLocaleString()} km` : '—'}
+                    <span className="text-sm text-gray-900">{vehicle.currentKm?.toLocaleString()} km</span>
                   </td>
-                  <td className="table-cell">{vehicle.serviceInfo?.kilometersUntilNextService != null ? `${vehicle.serviceInfo.kilometersUntilNextService.toLocaleString()} km` : '—'}</td>
-                  <td className="table-cell">{vehicle.fuelType}</td>
+                  <td className="table-cell">
+                    <span className="text-sm text-gray-900">{(vehicle.serviceIntervalKm ?? 5000).toLocaleString()} km</span>
+                  </td>
+                  <td className="table-cell">
+                    <span className="text-sm text-gray-900">
+                      {vehicle.serviceInfo?.nextServiceKm ? `${vehicle.serviceInfo.nextServiceKm.toLocaleString()} km` : '—'}
+                    </span>
+                  </td>
+                  <td className="table-cell">
+                    <span className="text-sm text-gray-900">
+                      {vehicle.serviceInfo?.kilometersUntilNextService != null ? `${vehicle.serviceInfo.kilometersUntilNextService.toLocaleString()} km` : '—'}
+                    </span>
+                  </td>
+                  <td className="table-cell">
+                    <span className="text-sm text-gray-700">{vehicle.fuelType}</span>
+                  </td>
                   <td className="table-cell">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleEdit(vehicle)}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 shadow-sm"
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Edit"
                         aria-label="Edit"
                       >
@@ -806,7 +879,7 @@ const Vehicles = () => {
                       </button>
                       <button
                         onClick={() => openHistoryModal(vehicle)}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                        className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                         title="Service history"
                         aria-label="Service history"
                       >
@@ -814,7 +887,7 @@ const Vehicles = () => {
                       </button>
                       <button
                         onClick={() => confirmDelete(vehicle)}
-                        className="flex items-center justify-center w-8 h-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 shadow-sm"
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete"
                         aria-label="Delete"
                       >
@@ -831,13 +904,15 @@ const Vehicles = () => {
           </table>
         </div>
         {filteredVehicles.length === 0 && (
-          <div className="text-center py-8">
-            <Truck className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No vehicles found</h3>
-            <p className="mt-1 text-sm text-gray-500">
+          <div className="text-center py-16 px-4">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl mb-4">
+              <Truck className="h-10 w-10 text-purple-600" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">No Vehicles Found</h3>
+            <p className="mt-2 text-sm text-gray-600 font-semibold max-w-sm mx-auto">
               {searchTerm || statusFilter !== 'all' 
-                ? 'Try adjusting your search or filter criteria.'
-                : 'Get started by adding a new vehicle.'
+                ? 'Try adjusting your search or filter criteria to find what you\'re looking for.'
+                : 'Get started by adding your first vehicle to the fleet.'
               }
             </p>
           </div>
@@ -846,45 +921,106 @@ const Vehicles = () => {
 
       {showModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen p-4">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75" />
-            <div className="bg-white rounded-lg shadow-xl transform transition-all sm:max-w-lg w-full">
-              <div className="px-6 py-4 border-b">
-                <h3 className="text-lg font-medium text-gray-900">
-                  {editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
-                </h3>
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setShowModal(false)} />
+            
+            <div className="relative bg-white rounded-2xl shadow-2xl transform transition-all sm:my-8 sm:max-w-2xl sm:w-full overflow-hidden">
+              {/* Top Gradient Bar */}
+              <div className="relative h-2 bg-gradient-to-r from-purple-600 via-primary-600 to-blue-600">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
               </div>
-              <form onSubmit={handleSubmit}>
-                <div className="p-6 space-y-4">
+
+              {/* Header */}
+              <div className="relative px-8 pt-8 pb-6 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-primary-500 rounded-xl flex items-center justify-center shadow-lg">
+                      <Truck className="h-7 w-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">
+                        {editingVehicle ? 'Edit Vehicle' : 'Create Vehicle'}
+                      </h3>
+                      <p className="text-sm text-gray-500 font-semibold mt-1">
+                        {editingVehicle ? 'Update vehicle information' : 'Add a new vehicle to the fleet'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Form */}
+              <div className="px-8 py-6 max-h-[65vh] overflow-y-auto">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   {formError && (
-                    <div className="bg-red-50 border border-red-200 text-red-800 px-3 py-2 rounded-md">
-                      {formError}
+                    <div className="bg-red-50 border-l-4 border-red-500 text-red-800 px-4 py-3 rounded-r-lg">
+                      <p className="text-sm font-semibold">{formError}</p>
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="form-label">Manufacturer</label>
-                      <input type="text" value={formData.manufacturer} onChange={(e) => setFormData({...formData, manufacturer: e.target.value})} className="input-field" />
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Manufacturer</label>
+                      <input 
+                        type="text" 
+                        value={formData.manufacturer} 
+                        onChange={(e) => setFormData({...formData, manufacturer: e.target.value})} 
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
+                        placeholder="e.g. Toyota"
+                      />
                     </div>
                     <div>
-                      <label className="form-label">Model</label>
-                      <input type="text" value={formData.model} onChange={(e) => setFormData({...formData, model: e.target.value})} className="input-field" required />
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Model *</label>
+                      <input 
+                        type="text" 
+                        value={formData.model} 
+                        onChange={(e) => setFormData({...formData, model: e.target.value})} 
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all" 
+                        required 
+                        placeholder="e.g. Hilux"
+                      />
                     </div>
                   </div>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="form-label">Year</label>
-                      <input type="number" value={formData.year} onChange={(e) => setFormData({...formData, year: e.target.value})} className="input-field" />
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Year</label>
+                      <input 
+                        type="number" 
+                        value={formData.year} 
+                        onChange={(e) => setFormData({...formData, year: e.target.value})} 
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
+                        placeholder="e.g. 2023"
+                      />
                     </div>
                     <div>
-                      <label className="form-label">Plate Number</label>
-                      <input type="text" value={formData.plateNumber} onChange={(e) => setFormData({...formData, plateNumber: e.target.value})} className="input-field" required />
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Plate Number *</label>
+                      <input 
+                        type="text" 
+                        value={formData.plateNumber} 
+                        onChange={(e) => setFormData({...formData, plateNumber: e.target.value})} 
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all" 
+                        required 
+                        placeholder="e.g. AA-1234"
+                      />
                     </div>
                   </div>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      <div>
-                      <label className="form-label">Type</label>
-                      <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} className="input-field">
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Type</label>
+                      <select 
+                        value={formData.type} 
+                        onChange={(e) => setFormData({...formData, type: e.target.value})} 
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
+                      >
                         <option>Automobile</option>
                         <option>Light Duty</option>
                         <option>Heavy Duty</option>
@@ -893,8 +1029,13 @@ const Vehicles = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="form-label">Fuel Type</label>
-                      <select value={formData.fuelType} onChange={(e) => setFormData({...formData, fuelType: e.target.value})} className="input-field" required>
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Fuel Type *</label>
+                      <select 
+                        value={formData.fuelType} 
+                        onChange={(e) => setFormData({...formData, fuelType: e.target.value})} 
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all" 
+                        required
+                      >
                         <option>Petrol</option>
                         <option>Diesel</option>
                         <option>Electric</option>
@@ -902,50 +1043,89 @@ const Vehicles = () => {
                       </select>
                     </div>
                   </div>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="form-label">Previous Service KM</label>
-                      <input type="number" value={formData.previousServiceKm} onChange={(e) => setFormData({...formData, previousServiceKm: e.target.value})} className="input-field" placeholder="Last service odometer" min="0" />
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Previous Service KM</label>
+                      <input 
+                        type="number" 
+                        value={formData.previousServiceKm} 
+                        onChange={(e) => setFormData({...formData, previousServiceKm: e.target.value})} 
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all" 
+                        placeholder="Last service KM" 
+                        min="0" 
+                      />
                     </div>
                     <div>
-                      <label className="form-label">Current Kilometers</label>
-                      <input type="number" value={formData.currentKm} onChange={(e) => setFormData({...formData, currentKm: e.target.value})} className="input-field" required />
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Current Kilometers *</label>
+                      <input 
+                        type="number" 
+                        value={formData.currentKm} 
+                        onChange={(e) => setFormData({...formData, currentKm: e.target.value})} 
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all" 
+                        required 
+                        placeholder="Current odometer"
+                      />
                     </div>
                   </div>
+                  
                   <div>
-                    <label className="form-label">Service Interval (KM)</label>
+                    <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Service Interval (KM)</label>
                     <input
                       type="number"
                       value={formData.serviceIntervalKm}
                       onChange={(e) => setFormData({ ...formData, serviceIntervalKm: e.target.value })}
-                      className="input-field"
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
                       placeholder="e.g. 5000"
                       min="0"
                     />
                   </div>
+                  
                   <div>
-                    <label className="form-label">Assigned Driver</label>
-                    <select value={formData.assignedDriver} onChange={(e) => setFormData({...formData, assignedDriver: e.target.value})} className="input-field">
+                    <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Assigned Driver</label>
+                    <select 
+                      value={formData.assignedDriver} 
+                      onChange={(e) => setFormData({...formData, assignedDriver: e.target.value})} 
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
+                    >
                       <option value="">Select Driver</option>
                       {users.map(user => (
                         <option key={user._id} value={user._id}>{user.fullName || user.username}</option>
                       ))}
                     </select>
                   </div>
+                  
                   <div>
-                    <label className="form-label">Status</label>
-                    <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value})} className="input-field">
+                    <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Status</label>
+                    <select 
+                      value={formData.status} 
+                      onChange={(e) => setFormData({...formData, status: e.target.value})} 
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
+                    >
                       <option value="active">Active</option>
                       <option value="under_maintenance">Under Maintenance</option>
                       <option value="inactive">Inactive</option>
                     </select>
                   </div>
-                </div>
-                <div className="bg-gray-50 px-6 py-3 flex justify-end space-x-3">
-                  <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">Cancel</button>
-                  <button type="submit" className="btn-primary">{editingVehicle ? 'Update' : 'Create'}</button>
-                </div>
-              </form>
+
+                  {/* Footer Actions */}
+                  <div className="flex items-center justify-end gap-3 pt-6 mt-6 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      className="px-6 py-2.5 bg-gray-100 text-gray-700 font-bold uppercase tracking-wide text-sm rounded-lg hover:bg-gray-200 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-8 py-2.5 bg-gradient-to-r from-purple-600 via-primary-600 to-blue-600 text-white font-black uppercase tracking-wide text-sm rounded-lg hover:shadow-xl hover:scale-105 transition-all"
+                    >
+                      {editingVehicle ? 'Update Vehicle' : 'Create Vehicle'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </div>

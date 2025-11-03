@@ -620,18 +620,47 @@ const FuelPage = () => {
       {/* Add/Edit Request Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => { setShowModal(false); setEditingRequest(null); resetForm(); }} />
             
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  {editingRequest ? 'Edit Fuel Request' : 'New Fuel Request'}
-                </h3>
-                
+            <div className="relative bg-white rounded-2xl shadow-2xl transform transition-all sm:my-8 sm:max-w-2xl sm:w-full overflow-hidden">
+              {/* Top Gradient Bar */}
+              <div className="relative h-2 bg-gradient-to-r from-purple-600 via-primary-600 to-blue-600">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+              </div>
+
+              {/* Header */}
+              <div className="relative px-8 pt-8 pb-6 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-primary-500 rounded-xl flex items-center justify-center shadow-lg">
+                      <FuelIcon className="h-7 w-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">
+                        {editingRequest ? 'Edit Request' : 'Create Request'}
+                      </h3>
+                      <p className="text-sm text-gray-500 font-semibold mt-1">
+                        {editingRequest ? 'Update fuel request information' : 'Submit a new fuel request'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setShowModal(false); setEditingRequest(null); resetForm(); }}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Form */}
+              <div className="px-8 py-6 max-h-[65vh] overflow-y-auto">
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Vehicle</label>
+                    <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Vehicle *</label>
                     <select
                       value={formData.vehicleId}
                       onChange={(e) => {
@@ -643,7 +672,7 @@ const FuelPage = () => {
                           currentKm: selectedVehicle && !formData.currentKm ? selectedVehicle.currentKm : formData.currentKm
                         });
                       }}
-                      className="input-field mt-1"
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
                       required
                     >
                       <option value="">Select Vehicle</option>
@@ -657,11 +686,11 @@ const FuelPage = () => {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Fuel Type</label>
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Fuel Type</label>
                       <select
                         value={formData.fuelType}
                         onChange={(e) => setFormData({...formData, fuelType: e.target.value})}
-                        className="input-field mt-1"
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
                       >
                         <option value="petrol">Petrol</option>
                         <option value="diesel">Diesel</option>
@@ -669,7 +698,7 @@ const FuelPage = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Quantity (L)</label>
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Quantity (L) *</label>
                       <input
                         type="number"
                         value={formData.quantity}
@@ -679,35 +708,36 @@ const FuelPage = () => {
                           const cost = pricePerLitre !== '' && quantity !== '' ? (Number(pricePerLitre) * Number(quantity)).toFixed(2) : '';
                           setFormData({...formData, quantity, cost});
                         }}
-                        className="input-field mt-1"
-                        placeholder="0"
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
+                        placeholder="e.g. 50"
                         min="0"
                         step="0.1"
                         required
                       />
                     </div>
                   </div>
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Current Kilometers</label>
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Current Kilometers *</label>
                       <input
                         type="number"
                         value={formData.currentKm}
                         onChange={(e) => setFormData({...formData, currentKm: e.target.value})}
-                        className="input-field mt-1"
-                        placeholder="0"
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
+                        placeholder="Current odometer"
                         min="0"
                         step="1"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Purpose</label>
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Purpose *</label>
                       <input
                         type="text"
                         value={formData.purpose}
                         onChange={(e) => setFormData({...formData, purpose: e.target.value})}
-                        className="input-field mt-1"
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
                         placeholder="Reason for request"
                         required
                       />
@@ -716,7 +746,7 @@ const FuelPage = () => {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Price per Litre ($)</label>
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Price per Litre (ETB)</label>
                       <input
                         type="number"
                         value={formData.pricePerLitre}
@@ -726,59 +756,60 @@ const FuelPage = () => {
                           const cost = pricePerLitre !== '' && quantity !== '' ? (Number(pricePerLitre) * Number(quantity)).toFixed(2) : '';
                           setFormData({...formData, pricePerLitre, cost});
                         }}
-                        className="input-field mt-1"
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
                         placeholder="0.00"
                         min="0"
                         step="0.01"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Total Cost ($)</label>
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Total Cost (ETB)</label>
                       <input
                         type="number"
                         value={formData.cost}
                         onChange={(e) => setFormData({...formData, cost: e.target.value})}
-                        className="input-field mt-1"
+                        className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
                         placeholder="0.00"
                         min="0"
                         step="0.01"
-                        readOnly={formData.pricePerLitre !== ''}
+                        disabled={formData.pricePerLitre !== ''}
                       />
                     </div>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Notes</label>
+                    <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Notes</label>
                     <textarea
                       value={formData.notes}
                       onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                      className="input-field mt-1"
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all resize-none"
                       rows="3"
                       placeholder="Any additional information..."
                     />
                   </div>
+
+                  {/* Footer Actions */}
+                  <div className="flex items-center justify-end gap-3 pt-6 mt-6 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowModal(false);
+                        setEditingRequest(null);
+                        resetForm();
+                      }}
+                      className="px-6 py-2.5 bg-gray-100 text-gray-700 font-bold uppercase tracking-wide text-sm rounded-lg hover:bg-gray-200 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      className="px-8 py-2.5 bg-gradient-to-r from-purple-600 via-primary-600 to-blue-600 text-white font-black uppercase tracking-wide text-sm rounded-lg hover:shadow-xl hover:scale-105 transition-all"
+                    >
+                      {editingRequest ? 'Update Request' : 'Create Request'}
+                    </button>
+                  </div>
                 </form>
-              </div>
-              
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  className="btn-primary w-full sm:w-auto sm:ml-3"
-                >
-                  {editingRequest ? 'Update' : 'Create'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setEditingRequest(null);
-                    resetForm();
-                  }}
-                  className="btn-secondary w-full sm:w-auto mt-3 sm:mt-0"
-                >
-                  Cancel
-                </button>
               </div>
             </div>
           </div>

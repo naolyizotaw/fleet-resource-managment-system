@@ -215,64 +215,121 @@ const Logs = () => {
           </div>
         </div>
       )}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Trip Logs</h1>
-          <p className="text-gray-600">Create and manage trip logs for vehicles.</p>
+      {/* Page Header */}
+      <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-xl shadow-xl border border-slate-700 overflow-hidden px-6 py-4">
+        {/* Top label */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-1 h-1 bg-primary-500 rounded-full"></div>
+          <span className="text-[9px] uppercase tracking-[0.15em] font-black text-slate-400">Trip Logs Dashboard</span>
         </div>
-        <button onClick={openCreate} className="btn-primary flex items-center space-x-2">
-          <Plus className="h-4 w-4" />
-          <span>New Log</span>
-        </button>
+        
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight mb-1">
+              Trip Logs
+            </h1>
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-slate-400 font-semibold">Live Data</span>
+              </div>
+              <div className="w-px h-3 bg-slate-600"></div>
+              <span className="text-slate-400 font-semibold">Real-time Analytics</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openCreate}
+              className="group relative px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold uppercase tracking-wide rounded-lg transition-all flex items-center gap-2 border border-slate-600"
+            >
+              <Plus size={16} />
+              <span className="text-xs">New Log</span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="card">
+      {/* Filters and Search */}
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
+            <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search by plate, vehicle, or remarks..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-10"
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
               />
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select className="input-field" value={vehicleFilter} onChange={(e) => setVehicleFilter(e.target.value)}>
-              <option value="all">All Vehicles</option>
-              {vehicles.map(v => (<option key={v._id} value={v._id}>{v.plateNumber ? `${v.plateNumber} — ${formatVehicleLabel(v)}` : formatVehicleLabel(v)}</option>))}
-            </select>
+          <div className="md:w-64">
+            <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Filter Vehicle</label>
+            <div className="relative">
+              <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <select 
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all appearance-none cursor-pointer" 
+                value={vehicleFilter} 
+                onChange={(e) => setVehicleFilter(e.target.value)}
+              >
+                <option value="all">All Vehicles</option>
+                {vehicles.map(v => (<option key={v._id} value={v._id}>{v.plateNumber ? `${v.plateNumber} — ${formatVehicleLabel(v)}` : formatVehicleLabel(v)}</option>))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="card">
+      {/* Trip Logs Table */}
+      <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-lg border border-primary-100 overflow-hidden">
+        {/* Table Header */}
+        <div className="relative bg-white px-6 py-6 border-b-4 border-primary-600">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-600 via-primary-500 to-primary-600"></div>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary-600 rounded-xl blur opacity-30"></div>
+                <div className="relative w-12 h-12 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg">
+                  <Truck className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Trip Logs</h3>
+                <p className="text-xs text-gray-500 font-bold mt-0.5">Track and manage all vehicle trips</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-2 bg-primary-50 rounded-lg border border-primary-200">
+              <div className="w-2 h-2 bg-primary-600 rounded-full animate-pulse"></div>
+              <span className="text-sm font-black text-primary-700">{filteredLogs.length} Total</span>
+            </div>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="table-header">Date</th>
-                <th className="table-header">Vehicle</th>
-                <th className="table-header">Plate</th>
-                <th className="table-header">Driver</th>
-                <th className="table-header">Start KM</th>
-                <th className="table-header">End KM</th>
-                <th className="table-header">Distance</th>
-                <th className="table-header">Logged By</th>
-                <th className="table-header">Remarks</th>
-                <th className="table-header">Actions</th>
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gradient-to-r from-gray-50 to-primary-50/50">
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Date</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Vehicle</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Plate</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Driver</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Start KM</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">End KM</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Distance</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Logged By</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Remarks</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white/80 backdrop-blur-sm">
               {filteredLogs.map(log => {
                 const rv = resolveVehicle(log);
                 const driverLabel = getDriverDisplayName(log.driverId) || getDriverDisplayName(rv?.assignedDriver) || '-';
                 return (
-                  <tr key={log._id} className="hover:bg-gray-50">
+                  <tr key={log._id} className="group hover:bg-primary-50 hover:shadow-sm transition-all border-b border-gray-100">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{log.date ? new Date(log.date).toLocaleDateString() : '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -312,6 +369,21 @@ const Logs = () => {
             </tbody>
           </table>
         </div>
+
+        {filteredLogs.length === 0 && (
+          <div className="text-center py-16 px-4">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-2xl mb-4">
+              <Truck className="h-10 w-10 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-2">No trip logs found</h3>
+            <p className="text-sm text-gray-500 font-medium">
+              {searchTerm || vehicleFilter !== 'all' 
+                ? 'Try adjusting your search or filter criteria.'
+                : 'Get started by creating a new trip log.'
+              }
+            </p>
+          </div>
+        )}
       </div>
       <EditModal log={editingLog} vehicles={vehicles} drivers={drivers} onChange={setEditingLog} onCancel={closeEdit} onSave={handleSaveEdit} getDriverDisplayName={getDriverDisplayName} />
       {logToDelete && (
@@ -356,49 +428,134 @@ const EditModal = ({ log, vehicles, drivers, onChange, onCancel, onSave, getDriv
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg w-11/12 max-w-2xl p-6">
-  <h2 className="text-lg font-semibold mb-4">{log._id ? 'Edit Log' : 'New Log'}</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-gray-700">Date</label>
-            <input type="date" className="input-field" value={log.date ? new Date(log.date).toISOString().slice(0,10) : ''} onChange={(e) => onChange({ ...log, date: e.target.value })} />
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onCancel} />
+        
+        <div className="relative bg-white rounded-2xl shadow-2xl transform transition-all sm:my-8 sm:max-w-2xl sm:w-full overflow-hidden">
+          {/* Top Gradient Bar */}
+          <div className="relative h-2 bg-gradient-to-r from-purple-600 via-primary-600 to-blue-600">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
           </div>
-          <div>
-            <label className="block text-sm text-gray-700">Vehicle</label>
-            <select className="input-field" value={log.vehicle || log.vehicleId || ''} onChange={handleVehicleChange}>
-              <option value="">Select vehicle</option>
-              {vehicles.map(v => <option key={v._id} value={v._id}>{v.plateNumber ? `${v.plateNumber} — ${[v.year, v.manufacturer, v.model].filter(Boolean).join(' ')}` : [v.year, v.manufacturer, v.model].filter(Boolean).join(' ')}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700">Start KM</label>
-            <input type="number" className="input-field" value={log.startKm ?? ''} onChange={(e) => onChange({ ...log, startKm: e.target.value })} />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700">End KM</label>
-            <input type="number" className="input-field" value={log.endKm ?? ''} onChange={(e) => onChange({ ...log, endKm: e.target.value })} />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-sm text-gray-700">Remarks</label>
-            <input className="input-field w-full" value={log.remarks || ''} onChange={(e) => onChange({ ...log, remarks: e.target.value })} />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-sm text-gray-700">Driver</label>
-            <select
-              className="input-field"
-              value={typeof log.driverId === 'object' && log.driverId !== null ? (log.driverId._id || '') : (log.driverId || '')}
-              onChange={(e) => onChange({ ...log, driverId: e.target.value })}
-            >
-              <option value="">Select driver</option>
-              {drivers.map(d => <option key={d._id} value={d._id}>{getDriverDisplayName(d)}</option>)}
-            </select>
-          </div>
-        </div>
 
-        <div className="mt-6 flex justify-end gap-3">
-          <button className="btn-secondary" onClick={onCancel}>Cancel</button>
-          <button className="btn-primary" onClick={onSave}>Save</button>
+          {/* Header */}
+          <div className="relative px-8 pt-8 pb-6 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-primary-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <Truck className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">
+                    {log._id ? 'Edit Log' : 'Create Log'}
+                  </h3>
+                  <p className="text-sm text-gray-500 font-semibold mt-1">
+                    {log._id ? 'Update trip log information' : 'Record a new trip log'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onCancel}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Form */}
+          <div className="px-8 py-6 max-h-[65vh] overflow-y-auto">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Date *</label>
+                  <input 
+                    type="date" 
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all" 
+                    value={log.date ? new Date(log.date).toISOString().slice(0,10) : ''} 
+                    onChange={(e) => onChange({ ...log, date: e.target.value })} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Vehicle *</label>
+                  <select 
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all" 
+                    value={log.vehicle || log.vehicleId || ''} 
+                    onChange={handleVehicleChange}
+                  >
+                    <option value="">Select vehicle</option>
+                    {vehicles.map(v => <option key={v._id} value={v._id}>{v.plateNumber ? `${v.plateNumber} — ${[v.year, v.manufacturer, v.model].filter(Boolean).join(' ')}` : [v.year, v.manufacturer, v.model].filter(Boolean).join(' ')}</option>)}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Start KM *</label>
+                  <input 
+                    type="number" 
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all" 
+                    value={log.startKm ?? ''} 
+                    onChange={(e) => onChange({ ...log, startKm: e.target.value })} 
+                    placeholder="Starting odometer"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">End KM *</label>
+                  <input 
+                    type="number" 
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all" 
+                    value={log.endKm ?? ''} 
+                    onChange={(e) => onChange({ ...log, endKm: e.target.value })} 
+                    placeholder="Ending odometer"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Driver</label>
+                <select
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
+                  value={typeof log.driverId === 'object' && log.driverId !== null ? (log.driverId._id || '') : (log.driverId || '')}
+                  onChange={(e) => onChange({ ...log, driverId: e.target.value })}
+                >
+                  <option value="">Select driver</option>
+                  {drivers.map(d => <option key={d._id} value={d._id}>{getDriverDisplayName(d)}</option>)}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Remarks</label>
+                <textarea 
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-sm font-semibold text-gray-900 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all resize-none" 
+                  value={log.remarks || ''} 
+                  onChange={(e) => onChange({ ...log, remarks: e.target.value })} 
+                  rows="3"
+                  placeholder="Any additional notes or comments..."
+                />
+              </div>
+
+              {/* Footer Actions */}
+              <div className="flex items-center justify-end gap-3 pt-6 mt-6 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="px-6 py-2.5 bg-gray-100 text-gray-700 font-bold uppercase tracking-wide text-sm rounded-lg hover:bg-gray-200 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onSave}
+                  className="px-8 py-2.5 bg-gradient-to-r from-purple-600 via-primary-600 to-blue-600 text-white font-black uppercase tracking-wide text-sm rounded-lg hover:shadow-xl hover:scale-105 transition-all"
+                >
+                  {log._id ? 'Update Log' : 'Create Log'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

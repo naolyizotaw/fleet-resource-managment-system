@@ -403,105 +403,127 @@ const Maintenance = () => {
           </div>
         </div>
       )}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Maintenance Requests</h1>
-          <p className="text-gray-600">Manage vehicle maintenance requests</p>
+      {/* Page Header */}
+      <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-xl shadow-xl border border-slate-700 overflow-hidden px-6 py-4">
+        {/* Top label */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-1 h-1 bg-primary-500 rounded-full"></div>
+          <span className="text-[9px] uppercase tracking-[0.15em] font-black text-slate-400">Maintenance Management Dashboard</span>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center space-x-2"
-        >
-          <Plus size={16} className="inline-block" />
-          <span>New Request</span>
-        </button>
+        
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight mb-1">
+              Maintenance Requests
+            </h1>
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-slate-400 font-semibold">Live Data</span>
+              </div>
+              <div className="w-px h-3 bg-slate-600"></div>
+              <span className="text-slate-400 font-semibold">Real-time Analytics</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowModal(true)}
+              className="group relative px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold uppercase tracking-wide rounded-lg transition-all flex items-center gap-2 border border-slate-600"
+            >
+              <Plus size={16} />
+              <span className="text-xs">New Request</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Filters and Search */}
-      <div className="card">
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
+            <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Search</label>
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 inline-block" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search maintenance requests..."
+                placeholder="Search by vehicle, plate, or requester..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-10"
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
               />
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Filter size={16} className="text-gray-400 inline-block" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="input-field"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="completed">Completed</option>
-            </select>
+          <div className="md:w-64">
+            <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Filter Status</label>
+            <div className="relative">
+              <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all appearance-none cursor-pointer"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Requests Table */}
-      <div className="card">
+      <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-lg border border-primary-100 overflow-hidden">
+        {/* Table Header */}
+        <div className="relative bg-white px-6 py-6 border-b-4 border-primary-600">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-600 via-primary-500 to-primary-600"></div>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary-600 rounded-xl blur opacity-30"></div>
+                <div className="relative w-12 h-12 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg">
+                  <Wrench className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Maintenance Requests</h3>
+                <p className="text-xs text-gray-500 font-bold mt-0.5">Manage and track all maintenance requests</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-2 bg-primary-50 rounded-lg border border-primary-200">
+              <div className="w-2 h-2 bg-primary-600 rounded-full animate-pulse"></div>
+              <span className="text-sm font-black text-primary-700">{filteredRequests.length} Total</span>
+            </div>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Request
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Vehicle
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Plate #
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Driver
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Priority
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cost
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Requested
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Approval
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Completed Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Remarks
-                </th>
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gradient-to-r from-gray-50 to-primary-50/50">
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Request</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Vehicle</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Plate #</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Category</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Driver</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Priority</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Cost</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Status</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Requested</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Approval</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Completed Date</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Actions</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Remarks</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white/80 backdrop-blur-sm">
               {filteredRequests.map((request) => (
                 <tr
                   key={request._id}
                   ref={(el) => { if (el) rowRefs.current[request._id] = el; }}
-                  className={`hover:bg-gray-50 ${highlightedId === request._id ? 'bg-yellow-50 ring-2 ring-amber-400' : ''}`}
+                  className={`group hover:bg-primary-50 hover:shadow-sm transition-all border-b border-gray-100 ${highlightedId === request._id ? 'bg-yellow-50 ring-2 ring-amber-400' : ''}`}
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-start">
@@ -652,10 +674,12 @@ const Maintenance = () => {
         </div>
 
         {filteredRequests.length === 0 && (
-          <div className="text-center py-8">
-            <Wrench size={48} className="mx-auto text-gray-400 inline-block" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No maintenance requests found</h3>
-            <p className="mt-1 text-sm text-gray-500">
+          <div className="text-center py-16 px-4">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-2xl mb-4">
+              <Wrench className="h-10 w-10 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-2">No maintenance requests found</h3>
+            <p className="text-sm text-gray-500 font-medium">
               {searchTerm || statusFilter !== 'all' 
                 ? 'Try adjusting your search or filter criteria.'
                 : 'Get started by creating a new maintenance request.'
@@ -669,103 +693,128 @@ const Maintenance = () => {
       {showModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => { setShowModal(false); setEditingRequest(null); resetForm(); }} />
             
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  {editingRequest ? 'Edit Maintenance Request' : 'New Maintenance Request'}
-                </h3>
+            <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border border-gray-200">
+              {/* Modal Header */}
+              <div className="relative bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                      <Wrench className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-white uppercase tracking-tight">
+                        {editingRequest ? 'Edit Request' : 'New Request'}
+                      </h3>
+                      <p className="text-xs text-white/80 font-semibold">Maintenance Request Form</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setShowModal(false); setEditingRequest(null); resetForm(); }}
+                    className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  >
+                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
 
+              <div className="bg-white px-6 py-6">
                 {conflictInfo && (
-                  <div className="mb-4 p-3 rounded border-l-4 border-red-500 bg-red-50">
+                  <div className="mb-6 p-4 rounded-xl border-l-4 border-red-500 bg-red-50">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-sm font-semibold text-red-800">{conflictInfo.message}</div>
-                        <div className="text-xs text-red-700">Status: {conflictInfo.status}</div>
+                        <div className="text-sm font-bold text-red-800">{conflictInfo.message}</div>
+                        <div className="text-xs text-red-700 mt-1">Status: {conflictInfo.status}</div>
                       </div>
                       {conflictInfo.requestId && (
                         <button
                           onClick={() => viewExistingRequest(conflictInfo.requestId)}
-                          className="ml-4 btn-primary text-sm"
+                          className="px-4 py-2 bg-red-600 text-white text-xs font-bold uppercase rounded-lg hover:bg-red-700 transition-all"
                           type="button"
                         >
-                          View Existing Request
+                          View Existing
                         </button>
                       )}
                     </div>
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Category</label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) => setFormData({...formData, category: e.target.value})}
-                      className="input-field mt-1"
-                      required
-                    >
-                      <option value="">Select Category</option>
-                      <option value="Engine">Engine</option>
-                      <option value="Tires & Wheels">Tires & Wheels</option>
-                      <option value="Brakes">Brakes</option>
-                      <option value="Electrical">Electrical</option>
-                      <option value="Cargo">Cargo</option>
-                      <option value="Machinery">Machinery</option>
-                      <option value="Service">Service</option>
-                      <option value="Other">Other</option>
-                    </select>
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Category *</label>
+                      <select
+                        value={formData.category}
+                        onChange={(e) => setFormData({...formData, category: e.target.value})}
+                        className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
+                        required
+                      >
+                        <option value="">Select Category</option>
+                        <option value="Engine">Engine</option>
+                        <option value="Tires & Wheels">Tires & Wheels</option>
+                        <option value="Brakes">Brakes</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="Cargo">Cargo</option>
+                        <option value="Machinery">Machinery</option>
+                        <option value="Service">Service</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Vehicle *</label>
+                      <select
+                        value={formData.vehicleId}
+                        onChange={(e) => setFormData({...formData, vehicleId: e.target.value})}
+                        className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
+                        required
+                      >
+                        <option value="">Select Vehicle</option>
+                        {vehicles.map(vehicle => (
+                          <option key={vehicle._id} value={vehicle._id}>
+                            {vehicle.year} {vehicle.manufacturer || ''} {vehicle.model} - {vehicle.plateNumber || 'No Plate'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+
                   {formData.category === 'Service' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Service KM (optional)</label>
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Service KM (optional)</label>
                       <input
                         type="number"
                         value={formData.serviceKm || ''}
                         onChange={(e) => setFormData({...formData, serviceKm: e.target.value})}
-                        className="input-field mt-1"
+                        className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
                         placeholder="Leave blank to use vehicle current KM"
                         min="0"
                       />
                     </div>
                   )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Vehicle</label>
-                    <select
-                      value={formData.vehicleId}
-                      onChange={(e) => setFormData({...formData, vehicleId: e.target.value})}
-                      className="input-field mt-1"
-                      required
-                    >
-                      <option value="">Select Vehicle</option>
-                      {vehicles.map(vehicle => (
-                        <option key={vehicle._id} value={vehicle._id}>
-                          {vehicle.year} {vehicle.manufacturer || ''} {vehicle.model} - {vehicle.plateNumber || 'No Plate'}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                    <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Description *</label>
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
-                      className="input-field mt-1"
-                      rows="3"
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all resize-none"
+                      rows="4"
                       required
-                      placeholder="Describe the maintenance issue..."
+                      placeholder="Describe the maintenance issue in detail..."
                     />
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Priority</label>
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Priority</label>
                       <select
                         value={formData.priority}
                         onChange={(e) => setFormData({...formData, priority: e.target.value})}
-                        className="input-field mt-1"
+                        className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
                       >
                         <option value="low">Low</option>
                         <option value="medium">Medium</option>
@@ -773,12 +822,12 @@ const Maintenance = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Estimated Cost</label>
+                      <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Estimated Cost (ETB)</label>
                       <input
                         type="number"
                         value={formData.estimatedCost}
                         onChange={(e) => setFormData({...formData, estimatedCost: e.target.value})}
-                        className="input-field mt-1"
+                        className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
                         placeholder="0.00"
                         min="0"
                         step="0.01"
@@ -787,26 +836,19 @@ const Maintenance = () => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Additional Notes</label>
+                    <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Additional Notes</label>
                     <textarea
                       value={formData.notes}
                       onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                      className="input-field mt-1"
-                      rows="2"
-                      placeholder="Any additional information..."
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all resize-none"
+                      rows="3"
+                      placeholder="Any additional information or special instructions..."
                     />
                   </div>
                 </form>
               </div>
               
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  className="btn-primary w-full sm:w-auto sm:ml-3"
-                >
-                  {editingRequest ? 'Update' : 'Create'}
-                </button>
+              <div className="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => {
@@ -814,9 +856,16 @@ const Maintenance = () => {
                     setEditingRequest(null);
                     resetForm();
                   }}
-                  className="btn-secondary w-full sm:w-auto mt-3 sm:mt-0"
+                  className="px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 font-bold uppercase tracking-wide rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all"
                 >
                   Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-black uppercase tracking-wide rounded-xl hover:shadow-lg hover:scale-105 transition-all"
+                >
+                  {editingRequest ? 'Update Request' : 'Create Request'}
                 </button>
               </div>
             </div>
