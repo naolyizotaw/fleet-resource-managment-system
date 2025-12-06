@@ -19,6 +19,7 @@ import {
   ChevronDown,
   TrendingUp,
   Newspaper,
+  MapPin,
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -216,7 +217,7 @@ const Layout = ({ children }) => {
         });
         
         // Deduplicate the filtered list as well
-        const uniqueNotifMap = new Map();
+        const uniqueNotifMap = new Map(); 
         filteredList.forEach(n => {
           const key = n.entityId || n._id;
           if (key && !uniqueNotifMap.has(key)) {
@@ -281,6 +282,7 @@ const Layout = ({ children }) => {
     { name: 'News', href: '/news', icon: Newspaper, roles: ['admin', 'manager', 'user'] },
     { name: 'Users', href: '/users', icon: Users, roles: ['admin'] },
     { name: 'Vehicles', href: '/vehicles', icon: Truck, roles: ['admin', 'manager'] },
+    { name: 'Map', href: '/map', icon: MapPin, roles: ['admin', 'manager'] },
     { name: 'Maintenance', href: '/maintenance', icon: Wrench, roles: ['admin', 'manager', 'user'] },
     { name: 'Fuel', href: '/fuel', icon: Fuel, roles: ['admin', 'manager', 'user'] },
     { name: 'Per Diem', href: '/perdiem', icon: Receipt, roles: ['admin', 'manager', 'user'] },
@@ -336,7 +338,7 @@ const Layout = ({ children }) => {
               <div className={`${collapsed ? 'hidden' : 'flex-1'}`}>
                 <p className="text-sm font-bold text-white leading-none truncate">{user?.fullName || user?.username}</p>
                 <p className="text-xs text-primary-400 capitalize font-semibold mt-1">{user?.role}</p>
-              </div>
+            </div>
             </div>
           </div>
         </div>
@@ -379,7 +381,7 @@ const Layout = ({ children }) => {
             <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Management</span>
           </div>
           <div className="space-y-1.5">
-            {filteredNavigation.filter(i => ['Users','Vehicles','Maintenance','Fuel','Per Diem','Logs'].includes(i.name)).map(item => {
+            {filteredNavigation.filter(i => ['Users','Vehicles','Map','Maintenance','Fuel','Per Diem','Logs'].includes(i.name)).map(item => {
               const isActive = location.pathname === item.href;
               return (
                 <Link 
@@ -454,7 +456,7 @@ const Layout = ({ children }) => {
             className={`group w-full flex items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-4'} py-3 text-sm font-bold text-gray-300 hover:bg-red-500/20 hover:text-red-400 rounded-xl transition-all border-2 border-transparent hover:border-red-500/30`}
           >
             <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center group-hover:bg-red-500/20 transition-all">
-              <LogOut className="h-5 w-5" />
+            <LogOut className="h-5 w-5" />
             </div>
             <span className={`${collapsed ? 'hidden' : ''} uppercase tracking-wide`}>Logout</span>
           </button>

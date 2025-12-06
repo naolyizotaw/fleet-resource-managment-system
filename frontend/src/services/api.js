@@ -60,6 +60,9 @@ export const vehiclesAPI = {
   create: (vehicleData) => api.post('/api/vehicles', vehicleData),
   update: (id, vehicleData) => api.put(`/api/vehicles/${id}`, vehicleData),
   delete: (id) => api.delete(`/api/vehicles/${id}`),
+  // Map feature endpoints (Phase 1)
+  getLocations: () => api.get('/api/vehicles/locations'),
+  updateLocation: (id, locationData) => api.put(`/api/vehicles/${id}/location`, locationData),
 };
 
 // Maintenance API

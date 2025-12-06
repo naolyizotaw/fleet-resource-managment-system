@@ -95,6 +95,12 @@ const vehicleSchema = new mongoose.Schema ({
     createdAt: {
         type: Date,
         default: Date.now,
+    },
+    // GPS Location for map tracking (Phase 1 - manual updates)
+    location: {
+        lat: { type: Number, default: null },
+        lng: { type: Number, default: null },
+        updatedAt: { type: Date, default: null }
     }
 
     }, 

@@ -16,6 +16,7 @@ import Logs from './pages/Logs';
 import Reports from './pages/Reports';
 import News from './pages/News';
 import Settings from './pages/Settings';
+import Map from './pages/Map';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -47,6 +48,12 @@ function AppRoutes() {
         <Route path="/vehicles" element={
           <ProtectedRoute allowedRoles={['admin', 'manager']}>
             <Vehicles />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/map" element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <Map />
           </ProtectedRoute>
         } />
         

@@ -201,11 +201,89 @@ const markVehicleService = async (req, res) => {
     }
 };
 
+// @desc Get all vehicle locations for map
+// @route GET /api/vehicles/locations
+// @access admin/manager
+const getVehicleLocations = async (req, res) => {
+    try {
+        const vehicles = await Vehicle.find({})
+            .select('plateNumber model status currentKm location assignedDriver')
+            .populate({ path: 'assignedDriver', select: 'fullName' });
+        
+        const result = vehicles.map(v => ({
+            _id: v._id,
+            plateNumber: v.plateNumber,
+            model: v.model,
+            status: v.status,
+            currentKm: v.currentKm,
+            assignedDriver: v.assignedDriver ? {
+                _id: v.assignedDriver._id,
+                fullName: v.assignedDriver.fullName
+            } : null,
+            location: v.location || { lat: null, lng: null, updatedAt: null }
+        }));
+        
+        return res.status(200).json(result);
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+// @desc Update vehicle location manually
+// @route PUT /api/vehicles/:id/location
+// @access admin/manager
+const updateVehicleLocation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid vehicle id' });
+        }
+        
+        const { lat, lng } = req.body;
+        
+        if (typeof lat !== 'number' || typeof lng !== 'number') {
+            return res.status(400).json({ message: 'lat and lng must be valid numbers' });
+        }
+        
+        // Validate coordinate ranges
+        if (lat < -90 || lat > 90) {
+            return res.status(400).json({ message: 'lat must be between -90 and 90' });
+        }
+        if (lng < -180 || lng > 180) {
+            return res.status(400).json({ message: 'lng must be between -180 and 180' });
+        }
+        
+        const vehicle = await Vehicle.findByIdAndUpdate(
+            id,
+            {
+                location: {
+                    lat,
+                    lng,
+                    updatedAt: new Date()
+                }
+            },
+            { new: true, runValidators: true }
+        ).populate({ path: 'assignedDriver', select: 'fullName username role' });
+        
+        if (!vehicle) {
+            return res.status(404).json({ message: 'Vehicle not found' });
+        }
+        
+        const out = vehicle.toObject ? vehicle.toObject({ virtuals: true }) : vehicle;
+        return res.status(200).json(out);
+    } catch (err) {
+        const status = err.name === 'ValidationError' ? 400 : 500;
+        return res.status(status).json({ message: err.message });
+    }
+};
+
 module.exports = {
     createVehicle,
     getVehicles,
     getVehicleById,
     updateVehicle,
-    deleteVehicle
-    ,markVehicleService
+    deleteVehicle,
+    markVehicleService,
+    getVehicleLocations,
+    updateVehicleLocation
 };

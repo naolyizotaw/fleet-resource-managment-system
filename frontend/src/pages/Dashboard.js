@@ -30,6 +30,7 @@ const Dashboard = () => {
   });
   const [recentRequests, setRecentRequests] = useState([]);
   const [news, setNews] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newsLoading, setNewsLoading] = useState(true);
 
@@ -47,6 +48,7 @@ const Dashboard = () => {
           user.role === 'admin' ? usersAPI.getAll() : Promise.resolve({ data: [] }),
         ]);
 
+        setVehicles(vehiclesRes.data);
         setStats({
           totalVehicles: vehiclesRes.data.length,
           totalUsers: user.role === 'admin' ? usersRes.data.length : 0,
@@ -183,6 +185,16 @@ const Dashboard = () => {
     }
   };
 
+  // Filter vehicles approaching service
+  const vehiclesNeedingService = vehicles.filter(vehicle => {
+    const kmUntilService = vehicle.serviceInfo?.kilometersUntilNextService;
+    return kmUntilService != null && kmUntilService < 500 && kmUntilService >= 0;
+  }).sort((a, b) => {
+    const aKm = a.serviceInfo?.kilometersUntilNextService ?? Infinity;
+    const bKm = b.serviceInfo?.kilometersUntilNextService ?? Infinity;
+    return aKm - bKm; // Most urgent first
+  });
+
   const buildLinkWithHighlight = (item) => {
     try {
       const t = (item?.type || '').toLowerCase();
@@ -256,159 +268,130 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="flex gap-6">
-      {/* Main Content */}
-      <div className="flex-1 space-y-8">
-        {/* Header Section */}
-      <div className="relative bg-gray-900 rounded-2xl shadow-2xl border border-gray-800 overflow-hidden">
-        {/* Dark gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black"></div>
-        
-        {/* Decorative shapes */}
-        <div className="absolute -right-16 -top-16 w-64 h-64 bg-gray-700/30 rounded-full blur-3xl"></div>
-        <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-gray-800/40 rounded-full blur-3xl"></div>
-        
-        {/* Subtle grid pattern overlay */}
+    <div className="space-y-6">
+      {/* Full Width Welcome Header */}
+      <div className="relative bg-gradient-to-br from-gray-900 via-slate-800 to-black rounded-xl shadow-lg overflow-hidden">
         <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
-          backgroundSize: '50px 50px'
+          backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+          backgroundSize: '20px 20px'
         }}></div>
-
-        <div className="relative p-8 md:p-10">
-          <div className="flex items-start justify-between flex-wrap gap-6">
-            <div className="flex-1 min-w-[280px]">
-              {/* Top badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800/60 backdrop-blur-sm rounded-full border border-gray-700/50 mb-4">
-                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
-                <span className="text-[10px] uppercase tracking-[0.2em] font-black text-gray-300">Dashboard Overview</span>
+        
+        <div className="relative px-6 py-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1 h-1 bg-primary-500 rounded-full"></div>
+                <span className="text-[9px] uppercase tracking-[0.15em] font-black text-gray-400">Dashboard</span>
               </div>
-
-              {/* Welcome message */}
-              <div className="mb-4">
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-3 leading-none">
-                  Welcome Back,
-                  <span className="block mt-2 text-gray-300">{user.fullName || user.username}</span>
-                </h1>
-              </div>
-
-              {/* Info row */}
-              <div className="flex items-center gap-6 flex-wrap">
-                <div className="flex items-center gap-2 text-gray-400">
-                  <Users className="h-4 w-4" />
-                  <span className="text-sm font-semibold">{user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span>
+              <h1 className="text-2xl md:text-3xl font-black text-white mb-1">
+                Welcome Back, {user.fullName || user.username}
+              </h1>
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-1.5 text-gray-300 text-sm">
+                  <Users className="h-3.5 w-3.5" />
+                  <span className="font-semibold capitalize">{user.role}</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-400">
-                  <Calendar className="h-4 w-4" />
-                  <span className="text-sm font-semibold">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+                <div className="w-px h-3 bg-gray-600"></div>
+                <div className="flex items-center gap-1.5 text-gray-300 text-sm">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span className="font-semibold">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+                <div className="w-px h-3 bg-gray-600"></div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-bold text-gray-300">System Online</span>
                 </div>
               </div>
-            </div>
-
-            {/* Right side - Status cards */}
-            <div className="flex flex-col gap-3">
-              {/* Active status */}
-              <div className="flex items-center gap-3 px-5 py-3 bg-gray-800/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-700/50">
-                <div className="flex items-center justify-center w-10 h-10 bg-green-500/20 rounded-lg border border-green-500/30">
-                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                </div>
-      <div>
-                  <p className="text-[10px] uppercase tracking-wider font-black text-gray-400">System Status</p>
-                  <p className="text-sm font-black text-white uppercase">Online</p>
-                </div>
-              </div>
-
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="flex gap-6">
+        {/* Main Content */}
+        <div className="flex-1 space-y-6">
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {user.role === 'admin' && (
-          <div className="group relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden">
-            <div className="absolute top-0 right-0 w-0 h-1 bg-primary-600 group-hover:w-full transition-all duration-500"></div>
+          <div className="group relative bg-white rounded-lg shadow-md border-l-4 border-blue-500 p-5 hover:shadow-lg transition-all cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Total Users</p>
-                <p className="text-4xl font-black text-gray-900 mb-1">{stats.totalUsers}</p>
-                <p className="text-xs text-gray-400">Active members</p>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">Total Users</p>
+                <p className="text-3xl font-black text-gray-900">{stats.totalUsers}</p>
+                <p className="text-xs text-gray-500 font-semibold mt-1">Active members</p>
               </div>
-              <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:scale-110 transition-all">
-                <Users className="h-8 w-8 text-blue-600 group-hover:text-white transition-colors" />
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-600 transition-all">
+                <Users className="h-6 w-6 text-blue-600 group-hover:text-white transition-colors" />
               </div>
             </div>
           </div>
         )}
 
         {(user.role === 'admin' || user.role === 'manager') && (
-          <div className="group relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden">
-            <div className="absolute top-0 right-0 w-0 h-1 bg-primary-600 group-hover:w-full transition-all duration-500"></div>
+          <div className="group relative bg-white rounded-lg shadow-md border-l-4 border-green-500 p-5 hover:shadow-lg transition-all cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Total Vehicles</p>
-                <p className="text-4xl font-black text-gray-900 mb-1">{stats.totalVehicles}</p>
-                <p className="text-xs text-gray-400">In fleet</p>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">Vehicles</p>
+                <p className="text-3xl font-black text-gray-900">{stats.totalVehicles}</p>
+                <p className="text-xs text-gray-500 font-semibold mt-1">In fleet</p>
               </div>
-              <div className="w-16 h-16 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-green-600 group-hover:scale-110 transition-all">
-                <Truck className="h-8 w-8 text-green-600 group-hover:text-white transition-colors" />
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-600 transition-all">
+                <Truck className="h-6 w-6 text-green-600 group-hover:text-white transition-colors" />
               </div>
             </div>
           </div>
         )}
 
-        <div className="group relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden">
-          <div className="absolute top-0 right-0 w-0 h-1 bg-primary-600 group-hover:w-full transition-all duration-500"></div>
+        <div className="group relative bg-white rounded-lg shadow-md border-l-4 border-yellow-500 p-5 hover:shadow-lg transition-all cursor-pointer">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Pending Maintenance</p>
-              <p className="text-4xl font-black text-gray-900 mb-1">{stats.pendingMaintenance}</p>
-              <p className="text-xs text-gray-400">Awaiting approval</p>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">Maintenance</p>
+              <p className="text-3xl font-black text-gray-900">{stats.pendingMaintenance}</p>
+              <p className="text-xs text-gray-500 font-semibold mt-1">Pending</p>
             </div>
-            <div className="w-16 h-16 bg-yellow-100 rounded-xl flex items-center justify-center group-hover:bg-yellow-600 group-hover:scale-110 transition-all">
-              <Wrench className="h-8 w-8 text-yellow-600 group-hover:text-white transition-colors" />
+            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center group-hover:bg-yellow-600 transition-all">
+              <Wrench className="h-6 w-6 text-yellow-600 group-hover:text-white transition-colors" />
             </div>
           </div>
         </div>
 
-        <div className="group relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden">
-          <div className="absolute top-0 right-0 w-0 h-1 bg-primary-600 group-hover:w-full transition-all duration-500"></div>
+        <div className="group relative bg-white rounded-lg shadow-md border-l-4 border-purple-500 p-5 hover:shadow-lg transition-all cursor-pointer">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Pending Fuel</p>
-              <p className="text-4xl font-black text-gray-900 mb-1">{stats.pendingFuel}</p>
-              <p className="text-xs text-gray-400">Requests pending</p>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">Fuel</p>
+              <p className="text-3xl font-black text-gray-900">{stats.pendingFuel}</p>
+              <p className="text-xs text-gray-500 font-semibold mt-1">Pending</p>
             </div>
-            <div className="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center group-hover:bg-purple-600 group-hover:scale-110 transition-all">
-              <Fuel className="h-8 w-8 text-purple-600 group-hover:text-white transition-colors" />
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-600 transition-all">
+              <Fuel className="h-6 w-6 text-purple-600 group-hover:text-white transition-colors" />
             </div>
           </div>
         </div>
 
-        <div className="group relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden">
-          <div className="absolute top-0 right-0 w-0 h-1 bg-primary-600 group-hover:w-full transition-all duration-500"></div>
+        <div className="group relative bg-white rounded-lg shadow-md border-l-4 border-indigo-500 p-5 hover:shadow-lg transition-all cursor-pointer">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Pending Per Diem</p>
-              <p className="text-4xl font-black text-gray-900 mb-1">{stats.pendingPerDiem}</p>
-              <p className="text-xs text-gray-400">Awaiting review</p>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">Per Diem</p>
+              <p className="text-3xl font-black text-gray-900">{stats.pendingPerDiem}</p>
+              <p className="text-xs text-gray-500 font-semibold mt-1">Pending</p>
             </div>
-            <div className="w-16 h-16 bg-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:scale-110 transition-all">
-              <Receipt className="h-8 w-8 text-indigo-600 group-hover:text-white transition-colors" />
+            <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-600 transition-all">
+              <Receipt className="h-6 w-6 text-indigo-600 group-hover:text-white transition-colors" />
             </div>
           </div>
         </div>
 
         {user.role === 'user' && (
-          <div className="group relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden">
-            <div className="absolute top-0 right-0 w-0 h-1 bg-primary-600 group-hover:w-full transition-all duration-500"></div>
+          <div className="group relative bg-white rounded-lg shadow-md border-l-4 border-gray-500 p-5 hover:shadow-lg transition-all cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Total Logs</p>
-                <p className="text-4xl font-black text-gray-900 mb-1">{stats.totalLogs}</p>
-                <p className="text-xs text-gray-400">Trip records</p>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1">Trip Logs</p>
+                <p className="text-3xl font-black text-gray-900">{stats.totalLogs}</p>
+                <p className="text-xs text-gray-500 font-semibold mt-1">Recorded</p>
               </div>
-              <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center group-hover:bg-gray-800 group-hover:scale-110 transition-all">
-                <FileText className="h-8 w-8 text-gray-600 group-hover:text-white transition-colors" />
+              <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-gray-800 transition-all">
+                <FileText className="h-6 w-6 text-gray-600 group-hover:text-white transition-colors" />
               </div>
             </div>
           </div>
@@ -416,17 +399,14 @@ const Dashboard = () => {
       </div>
 
       {/* Recent Requests */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-px w-8 bg-primary-600"></div>
-              <span className="text-xs uppercase tracking-widest font-bold text-gray-500">Activity Feed</span>
-            </div>
-            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Recent Requests</h2>
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-sm">
+            <TrendingUp className="h-5 w-5 text-white" />
           </div>
-          <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-            <TrendingUp className="h-6 w-6 text-primary-600" />
+          <div>
+            <h2 className="text-lg font-black text-gray-900 uppercase tracking-tight">Recent Requests</h2>
+            <p className="text-xs text-gray-500 font-semibold">Latest activity</p>
           </div>
         </div>
         
@@ -480,64 +460,69 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-px w-8 bg-primary-600"></div>
-            <span className="text-xs uppercase tracking-widest font-bold text-gray-500">Get Started</span>
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shadow-sm">
+            <TrendingUp className="h-5 w-5 text-white" />
           </div>
-          <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Quick Actions</h2>
+          <div>
+            <h2 className="text-lg font-black text-gray-900 uppercase tracking-tight">Quick Actions</h2>
+            <p className="text-xs text-gray-500 font-semibold">Common tasks</p>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <button 
             onClick={() => navigate('/maintenance')}
-            className="group relative p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-600 hover:bg-gradient-to-br hover:from-primary-50 hover:to-white transition-all duration-300 overflow-hidden"
+            className="group relative p-4 border-2 border-gray-200 rounded-lg hover:border-yellow-400 hover:bg-yellow-50 transition-all"
           >
-            <div className="absolute inset-0 bg-primary-600 opacity-0 group-hover:opacity-5 transition-opacity"></div>
-            <div className="relative">
-              <div className="w-14 h-14 bg-yellow-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-yellow-600 group-hover:scale-110 transition-all">
-                <Wrench className="h-7 w-7 text-yellow-600 group-hover:text-white transition-colors" />
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 bg-yellow-100 rounded-lg flex items-center justify-center group-hover:bg-yellow-600 transition-all">
+                <Wrench className="h-5 w-5 text-yellow-600 group-hover:text-white transition-colors" />
               </div>
-              <p className="text-sm font-black text-gray-900 uppercase tracking-wide text-center group-hover:text-primary-600 transition-colors">
-                Submit Maintenance Request
-              </p>
-              <p className="text-xs text-gray-500 text-center mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                Request vehicle maintenance
-              </p>
+              <div className="text-left">
+                <p className="text-sm font-black text-gray-900 uppercase tracking-tight">
+                  Maintenance
+                </p>
+                <p className="text-[10px] text-gray-500 font-semibold">
+                  New request
+                </p>
+              </div>
             </div>
           </button>
           <button 
             onClick={() => navigate('/fuel')}
-            className="group relative p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-600 hover:bg-gradient-to-br hover:from-primary-50 hover:to-white transition-all duration-300 overflow-hidden"
+            className="group relative p-4 border-2 border-gray-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all"
           >
-            <div className="absolute inset-0 bg-primary-600 opacity-0 group-hover:opacity-5 transition-opacity"></div>
-            <div className="relative">
-              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-purple-600 group-hover:scale-110 transition-all">
-                <Fuel className="h-7 w-7 text-purple-600 group-hover:text-white transition-colors" />
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-600 transition-all">
+                <Fuel className="h-5 w-5 text-purple-600 group-hover:text-white transition-colors" />
               </div>
-              <p className="text-sm font-black text-gray-900 uppercase tracking-wide text-center group-hover:text-primary-600 transition-colors">
-                Submit Fuel Request
-              </p>
-              <p className="text-xs text-gray-500 text-center mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                Request fuel refill
-              </p>
+              <div className="text-left">
+                <p className="text-sm font-black text-gray-900 uppercase tracking-tight">
+                  Fuel
+                </p>
+                <p className="text-[10px] text-gray-500 font-semibold">
+                  New request
+                </p>
+              </div>
             </div>
           </button>
           <button 
             onClick={() => navigate('/logs')}
-            className="group relative p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-600 hover:bg-gradient-to-br hover:from-primary-50 hover:to-white transition-all duration-300 overflow-hidden"
+            className="group relative p-4 border-2 border-gray-200 rounded-lg hover:border-indigo-400 hover:bg-indigo-50 transition-all"
           >
-            <div className="absolute inset-0 bg-primary-600 opacity-0 group-hover:opacity-5 transition-opacity"></div>
-            <div className="relative">
-              <div className="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-indigo-600 group-hover:scale-110 transition-all">
-                <FileText className="h-7 w-7 text-indigo-600 group-hover:text-white transition-colors" />
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-600 transition-all">
+                <FileText className="h-5 w-5 text-indigo-600 group-hover:text-white transition-colors" />
               </div>
-              <p className="text-sm font-black text-gray-900 uppercase tracking-wide text-center group-hover:text-primary-600 transition-colors">
-                Log Daily Trip
-              </p>
-              <p className="text-xs text-gray-500 text-center mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                Record your trip details
-              </p>
+              <div className="text-left">
+                <p className="text-sm font-black text-gray-900 uppercase tracking-tight">
+                  Trip Log
+                </p>
+                <p className="text-[10px] text-gray-500 font-semibold">
+                  New entry
+                </p>
+              </div>
             </div>
           </button>
         </div>
@@ -545,18 +530,16 @@ const Dashboard = () => {
     </div>
 
       {/* Sticky News Sidebar */}
-      <aside className="hidden lg:block w-96 flex-shrink-0">
-        <div className="sticky top-6">
-          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 max-h-[calc(100vh-3rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-md">
-                  <Newspaper className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-gray-900 uppercase tracking-tight">News & Events</h2>
-                  <p className="text-xs text-gray-500 font-semibold">Latest updates</p>
-                </div>
+      <aside className="hidden lg:block w-80 flex-shrink-0">
+        <div className="sticky top-6 space-y-4">
+          <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5 max-h-[calc(50vh-2rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-sm">
+                <Newspaper className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-gray-900 uppercase tracking-tight">News & Events</h2>
+                <p className="text-[10px] text-gray-500 font-semibold">Latest updates</p>
               </div>
             </div>
 
@@ -680,18 +663,92 @@ const Dashboard = () => {
         )}
 
             {/* View All Button */}
-            <div className="mt-6 pt-4 border-t border-gray-200">
+            <div className="mt-5 pt-4 border-t border-gray-200">
               <button 
                 onClick={() => navigate('/news')}
-                className="w-full px-4 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-black uppercase text-xs tracking-wide rounded-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2"
+                className="w-full px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-bold uppercase text-[10px] tracking-wider rounded-lg hover:shadow-lg transition-all flex items-center justify-center gap-2"
               >
-                <Newspaper className="h-4 w-4" />
+                <Newspaper className="h-3.5 w-3.5" />
                 <span>View All News</span>
               </button>
             </div>
           </div>
+
+          {/* Service Alerts - Only for admin/manager */}
+          {(user.role === 'admin' || user.role === 'manager') && vehiclesNeedingService.length > 0 && (
+            <div className="bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 rounded-xl shadow-md border-2 border-orange-300 p-5 max-h-[calc(50vh-2rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-orange-300 scrollbar-track-orange-100">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center shadow-sm relative">
+                  <div className="absolute inset-0 bg-orange-500 opacity-20 rounded-lg blur-sm animate-pulse"></div>
+                  <Wrench className="h-5 w-5 text-white relative z-10" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-base font-black text-gray-900 uppercase tracking-tight">Service Alerts</h3>
+                  <p className="text-[10px] text-orange-700 font-bold">
+                    {vehiclesNeedingService.length} {vehiclesNeedingService.length === 1 ? 'vehicle' : 'vehicles'} &lt; 500km
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {vehiclesNeedingService.map((vehicle) => {
+                  const kmLeft = vehicle.serviceInfo?.kilometersUntilNextService ?? 0;
+                  const isUrgent = kmLeft < 100;
+                  const isWarning = kmLeft >= 100 && kmLeft < 250;
+                  
+                  return (
+                    <div 
+                      key={vehicle._id}
+                      onClick={() => navigate('/vehicles')}
+                      className={`group relative p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                        isUrgent 
+                          ? 'bg-red-50 border-red-400 hover:border-red-500 hover:shadow-md' 
+                          : isWarning 
+                          ? 'bg-orange-50 border-orange-400 hover:border-orange-500 hover:shadow-md'
+                          : 'bg-yellow-50 border-yellow-400 hover:border-yellow-500 hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${
+                            isUrgent ? 'bg-red-600' : isWarning ? 'bg-orange-600' : 'bg-yellow-600'
+                          }`}>
+                            <Truck className="h-4 w-4 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-bold text-gray-900 truncate">
+                              {vehicle.manufacturer} {vehicle.model}
+                            </h4>
+                            <p className="text-[10px] text-gray-600 font-semibold">
+                              {vehicle.plateNumber || 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right flex-shrink-0">
+                          <div className={`text-xl font-black ${
+                            isUrgent ? 'text-red-700' : isWarning ? 'text-orange-700' : 'text-yellow-700'
+                          }`}>
+                            {kmLeft}
+                          </div>
+                          <div className="text-[8px] font-bold text-gray-600 uppercase">KM</div>
+                        </div>
+                      </div>
+                      
+                      {isUrgent && (
+                        <div className="mt-2 px-2 py-1 bg-red-100 border border-red-300 rounded">
+                          <p className="text-[9px] font-black text-red-800 uppercase tracking-wide text-center">⚠️ Critical</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </aside>
+      </div>
     </div>
   );
 };
