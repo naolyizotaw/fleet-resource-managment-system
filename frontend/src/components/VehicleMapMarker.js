@@ -4,43 +4,147 @@ import L from 'leaflet';
 import { useNavigate } from 'react-router-dom';
 
 /**
- * Creates a custom colored marker icon based on vehicle status
+ * Get colors based on vehicle status
+ * @param {string} status - Vehicle status
+ * @returns {Object} Color configuration
+ */
+const getStatusColors = (status) => {
+  switch (status) {
+    case 'active':
+      return { 
+        primary: '#10B981', 
+        secondary: '#059669', 
+        glow: 'rgba(16, 185, 129, 0.4)',
+        pulse: true 
+      };
+    case 'under_maintenance':
+      return { 
+        primary: '#F59E0B', 
+        secondary: '#D97706', 
+        glow: 'rgba(245, 158, 11, 0.4)',
+        pulse: false 
+      };
+    case 'inactive':
+      return { 
+        primary: '#EF4444', 
+        secondary: '#DC2626', 
+        glow: 'rgba(239, 68, 68, 0.4)',
+        pulse: false 
+      };
+    default:
+      return { 
+        primary: '#6B7280', 
+        secondary: '#4B5563', 
+        glow: 'rgba(107, 114, 128, 0.4)',
+        pulse: false 
+      };
+  }
+};
+
+/**
+ * Creates a custom truck marker icon based on vehicle status
  * @param {string} status - Vehicle status (active, under_maintenance, inactive)
  * @param {boolean} hasLocation - Whether vehicle has location data
+ * @param {boolean} isHighlighted - Whether the marker is highlighted (from search)
  * @returns {L.DivIcon} Custom Leaflet icon
  */
-const createMarkerIcon = (status, hasLocation) => {
-  let color = '#6B7280'; // gray - no location
+const createMarkerIcon = (status, hasLocation, isHighlighted = false) => {
+  const colors = hasLocation ? getStatusColors(status) : getStatusColors('default');
   
-  if (hasLocation) {
-    switch (status) {
-      case 'active':
-        color = '#10B981'; // green
-        break;
-      case 'under_maintenance':
-        color = '#F59E0B'; // orange
-        break;
-      case 'inactive':
-        color = '#EF4444'; // red
-        break;
-      default:
-        color = '#6B7280'; // gray
-    }
-  }
-
+  // Highlight ring color (blue glow)
+  const highlightRing = isHighlighted ? `
+    <div style="
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      width: 56px;
+      height: 56px;
+      border: 3px solid #3B82F6;
+      border-radius: 50%;
+      animation: highlightPulse 1s ease-in-out infinite;
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+    "></div>
+  ` : '';
+  
+  // Bounce animation for highlighted markers
+  const bounceStyle = isHighlighted ? 'animation: bounce 0.6s ease-in-out 3;' : '';
+  
+  // Modern truck icon marker with gradient background
   const svgIcon = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36">
-      <path fill="${color}" stroke="#ffffff" stroke-width="1" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-      <circle cx="12" cy="9" r="3" fill="#ffffff"/>
-    </svg>
+    <div style="position: relative; width: 48px; height: 56px; ${bounceStyle}">
+      ${highlightRing}
+      ${colors.pulse && !isHighlighted ? `
+        <div style="
+          position: absolute;
+          top: 4px;
+          left: 4px;
+          width: 40px;
+          height: 40px;
+          background: ${colors.glow};
+          border-radius: 50%;
+          animation: pulse 2s infinite;
+        "></div>
+      ` : ''}
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 56" width="48" height="56" style="position: relative; z-index: 2;">
+        <!-- Drop shadow -->
+        <defs>
+          <filter id="shadow-${status}-${isHighlighted ? 'hl' : 'normal'}" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="${isHighlighted ? '5' : '3'}" flood-color="${isHighlighted ? '#3B82F6' : '#000'}" flood-opacity="${isHighlighted ? '0.5' : '0.3'}"/>
+          </filter>
+          <linearGradient id="grad-${status}" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:${colors.primary};stop-opacity:1" />
+            <stop offset="100%" style="stop-color:${colors.secondary};stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        
+        <!-- Marker body -->
+        <path 
+          d="M24 4 C14 4 6 12 6 22 C6 35 24 52 24 52 C24 52 42 35 42 22 C42 12 34 4 24 4 Z" 
+          fill="url(#grad-${status})" 
+          stroke="${isHighlighted ? '#3B82F6' : '#ffffff'}" 
+          stroke-width="${isHighlighted ? '3' : '2'}"
+          filter="url(#shadow-${status}-${isHighlighted ? 'hl' : 'normal'})"
+        />
+        
+        <!-- Truck icon inside -->
+        <g transform="translate(12, 10)">
+          <!-- Truck body -->
+          <rect x="0" y="8" width="16" height="10" rx="1" fill="#ffffff"/>
+          <!-- Truck cabin -->
+          <path d="M16 8 L16 18 L22 18 L22 12 L19 8 Z" fill="#ffffff"/>
+          <!-- Truck window -->
+          <rect x="17" y="10" width="4" height="4" rx="0.5" fill="${colors.primary}"/>
+          <!-- Wheels -->
+          <circle cx="5" cy="19" r="2.5" fill="${colors.secondary}"/>
+          <circle cx="5" cy="19" r="1" fill="#ffffff"/>
+          <circle cx="18" cy="19" r="2.5" fill="${colors.secondary}"/>
+          <circle cx="18" cy="19" r="1" fill="#ffffff"/>
+        </g>
+      </svg>
+    </div>
+    <style>
+      @keyframes pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.3); opacity: 0.5; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      @keyframes highlightPulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.1); }
+      }
+      @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-15px); }
+      }
+    </style>
   `;
 
   return L.divIcon({
-    className: 'custom-marker-icon',
+    className: `custom-truck-marker ${isHighlighted ? 'highlighted' : ''}`,
     html: svgIcon,
-    iconSize: [36, 36],
-    iconAnchor: [18, 36],
-    popupAnchor: [0, -36],
+    iconSize: [48, 56],
+    iconAnchor: [24, 56],
+    popupAnchor: [0, -50],
   });
 };
 
@@ -89,8 +193,9 @@ const getStatusBadge = (status) => {
  * 
  * @param {Object} props
  * @param {Object} props.vehicle - Vehicle data object
+ * @param {boolean} props.isHighlighted - Whether this marker is highlighted (from search selection)
  */
-const VehicleMapMarker = ({ vehicle }) => {
+const VehicleMapMarker = ({ vehicle, isHighlighted = false }) => {
   const navigate = useNavigate();
   
   const hasLocation = vehicle.location?.lat != null && vehicle.location?.lng != null;
@@ -101,7 +206,7 @@ const VehicleMapMarker = ({ vehicle }) => {
   }
   
   const position = [vehicle.location.lat, vehicle.location.lng];
-  const icon = createMarkerIcon(vehicle.status, hasLocation);
+  const icon = createMarkerIcon(vehicle.status, hasLocation, isHighlighted);
   
   const handleViewDetails = () => {
     navigate(`/vehicles?highlight=${vehicle._id}`);
