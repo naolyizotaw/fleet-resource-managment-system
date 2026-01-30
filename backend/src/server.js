@@ -12,6 +12,7 @@ const perDiemRoutes = require('./routes/perDiemRoutes');
 const logRoutes = require('./routes/logRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const newsRoutes = require('./routes/newsRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
 
 
 const app = express();
@@ -25,7 +26,7 @@ app.use(express.json());
 
 //Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes); 
+app.use('/api/users', userRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/fuel', fuelRoutes);
@@ -33,6 +34,7 @@ app.use('/api/per-diem', perDiemRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/news', newsRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 
 //start server 

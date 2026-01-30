@@ -17,6 +17,7 @@ import Reports from './pages/Reports';
 import News from './pages/News';
 import Settings from './pages/Settings';
 import Map from './pages/Map';
+import Inventory from './pages/Inventory';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -37,40 +38,46 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        
+
         {/* Admin & Manager Routes */}
         <Route path="/users" element={
           <ProtectedRoute allowedRoles={['admin']}>
             <Users />
           </ProtectedRoute>
         } />
-        
+
         <Route path="/vehicles" element={
           <ProtectedRoute allowedRoles={['admin', 'manager']}>
             <Vehicles />
           </ProtectedRoute>
         } />
-        
+
         <Route path="/map" element={
           <ProtectedRoute allowedRoles={['admin', 'manager']}>
             <Map />
           </ProtectedRoute>
         } />
-        
+
         <Route path="/maintenance" element={<Maintenance />} />
         <Route path="/fuel" element={<Fuel />} />
         <Route path="/perdiem" element={<PerDiem />} />
         <Route path="/logs" element={<Logs />} />
-        
+
         <Route path="/reports" element={
           <ProtectedRoute allowedRoles={['admin', 'manager']}>
             <Reports />
           </ProtectedRoute>
         } />
-        
+
+        <Route path="/inventory" element={
+          <ProtectedRoute allowedRoles={['admin', 'manager', 'user']}>
+            <Inventory />
+          </ProtectedRoute>
+        } />
+
         <Route path="/news" element={<News />} />
         <Route path="/settings" element={<Settings />} />
-        
+
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>

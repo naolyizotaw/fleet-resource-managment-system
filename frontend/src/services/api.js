@@ -117,4 +117,17 @@ export const newsAPI = {
   delete: (id) => api.delete(`/api/news/${id}`),
 };
 
+// Inventory API
+export const inventoryAPI = {
+  getAll: (params) => api.get('/api/inventory', { params }),
+  getById: (id) => api.get(`/api/inventory/${id}`),
+  getStats: () => api.get('/api/inventory/stats'),
+  getLowStock: () => api.get('/api/inventory/low-stock'),
+  getHistory: (id) => api.get(`/api/inventory/${id}/history`),
+  create: (inventoryData) => api.post('/api/inventory', inventoryData),
+  update: (id, inventoryData) => api.put(`/api/inventory/${id}`, inventoryData),
+  adjustStock: (id, adjustmentData) => api.patch(`/api/inventory/${id}/adjust`, adjustmentData),
+  delete: (id) => api.delete(`/api/inventory/${id}`),
+};
+
 export default api;

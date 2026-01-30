@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Newspaper,
   MapPin,
+  Package,
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -190,7 +191,7 @@ const Layout = ({ children }) => {
         ]);
         const list = notifRes.data?.data || [];
         const pData = pendingRes.data?.data || [];
-        
+
         // Deduplicate pending items first
         const uniquePendingMap = new Map();
         pData.forEach(p => {
@@ -200,7 +201,7 @@ const Layout = ({ children }) => {
           }
         });
         const uniquePending = Array.from(uniquePendingMap.values());
-        
+
         // Filter out notifications that are also pending requests to prevent duplication
         // Check both _id and entityId to catch all duplicates
         const pendingKeys = new Set();
@@ -208,16 +209,16 @@ const Layout = ({ children }) => {
           if (p._id) pendingKeys.add(p._id);
           if (p.entityId) pendingKeys.add(p.entityId);
         });
-        
+
         const filteredList = list.filter(n => {
           // Don't show if notification's _id or entityId matches any pending request
           if (n._id && pendingKeys.has(n._id)) return false;
           if (n.entityId && pendingKeys.has(n.entityId)) return false;
           return true;
         });
-        
+
         // Deduplicate the filtered list as well
-        const uniqueNotifMap = new Map(); 
+        const uniqueNotifMap = new Map();
         filteredList.forEach(n => {
           const key = n.entityId || n._id;
           if (key && !uniqueNotifMap.has(key)) {
@@ -225,7 +226,7 @@ const Layout = ({ children }) => {
           }
         });
         const uniqueNotifications = Array.from(uniqueNotifMap.values());
-        
+
         if (notifPage === 1) {
           setNotifications(uniqueNotifications);
         } else {
@@ -261,7 +262,7 @@ const Layout = ({ children }) => {
       await api.patch(`/api/notifications/${id}/read`);
       setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, status: 'read' } : n)));
       setUnreadCount((c) => Math.max(0, c - 1));
-    } catch {}
+    } catch { }
   };
 
   const markAllRead = async () => {
@@ -274,7 +275,7 @@ const Layout = ({ children }) => {
         setNotifications((prev) => prev.map((n) => ({ ...n, status: 'read' })));
       }
       setUnreadCount(0);
-    } catch {}
+    } catch { }
   };
 
   const navigationItems = [
@@ -287,6 +288,7 @@ const Layout = ({ children }) => {
     { name: 'Fuel', href: '/fuel', icon: Fuel, roles: ['admin', 'manager', 'user'] },
     { name: 'Per Diem', href: '/perdiem', icon: Receipt, roles: ['admin', 'manager', 'user'] },
     { name: 'Logs', href: '/logs', icon: FileText, roles: ['admin', 'manager', 'user'] },
+    { name: 'Inventory', href: '/inventory', icon: Package, roles: ['admin', 'manager', 'user'] },
     { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager'] },
     { name: 'Settings', href: '/settings', icon: User, roles: ['admin', 'manager', 'user'] },
   ];
@@ -297,16 +299,15 @@ const Layout = ({ children }) => {
     <div className="h-screen overflow-hidden bg-gray-50 lg:flex">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 ${collapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 shadow-2xl transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <div className={`fixed inset-y-0 left-0 z-50 ${collapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 shadow-2xl transform transition-all duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
         <div className="flex items-center justify-between h-20 px-6 border-b border-white/10">
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -338,7 +339,7 @@ const Layout = ({ children }) => {
               <div className={`${collapsed ? 'hidden' : 'flex-1'}`}>
                 <p className="text-sm font-bold text-white leading-none truncate">{user?.fullName || user?.username}</p>
                 <p className="text-xs text-primary-400 capitalize font-semibold mt-1">{user?.role}</p>
-            </div>
+              </div>
             </div>
           </div>
         </div>
@@ -350,18 +351,17 @@ const Layout = ({ children }) => {
             <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Main</span>
           </div>
           <div className="space-y-1.5">
-            {filteredNavigation.filter(i => ['Dashboard','News','Reports'].includes(i.name)).map(item => {
+            {filteredNavigation.filter(i => ['Dashboard', 'News', 'Reports'].includes(i.name)).map(item => {
               const isActive = location.pathname === item.href;
               return (
-                <Link 
-                  key={item.name} 
-                  to={item.href} 
-                  onClick={() => setSidebarOpen(false)} 
-                  className={`group relative flex items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-4'} py-3 rounded-xl transition-all ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg' 
-                      : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                  }`}
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`group relative flex items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-4'} py-3 rounded-xl transition-all ${isActive
+                    ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg'
+                    : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                    }`}
                 >
                   {isActive && !collapsed && (
                     <div className="absolute left-0 w-1 h-8 bg-white rounded-r-full"></div>
@@ -381,18 +381,17 @@ const Layout = ({ children }) => {
             <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Management</span>
           </div>
           <div className="space-y-1.5">
-            {filteredNavigation.filter(i => ['Users','Vehicles','Map','Maintenance','Fuel','Per Diem','Logs'].includes(i.name)).map(item => {
+            {filteredNavigation.filter(i => ['Users', 'Vehicles', 'Map', 'Maintenance', 'Fuel', 'Per Diem', 'Logs', 'Inventory'].includes(i.name)).map(item => {
               const isActive = location.pathname === item.href;
               return (
-                <Link 
-                  key={item.name} 
-                  to={item.href} 
-                  onClick={() => setSidebarOpen(false)} 
-                  className={`group relative flex items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-4'} py-3 rounded-xl transition-all ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg' 
-                      : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                  }`}
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`group relative flex items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-4'} py-3 rounded-xl transition-all ${isActive
+                    ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg'
+                    : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                    }`}
                 >
                   {isActive && !collapsed && (
                     <div className="absolute left-0 w-1 h-8 bg-white rounded-r-full"></div>
@@ -416,15 +415,14 @@ const Layout = ({ children }) => {
             {filteredNavigation.filter(i => ['Settings'].includes(i.name)).map(item => {
               const isActive = location.pathname === item.href;
               return (
-                <Link 
-                  key={item.name} 
-                  to={item.href} 
-                  onClick={() => setSidebarOpen(false)} 
-                  className={`group relative flex items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-4'} py-3 rounded-xl transition-all ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg' 
-                      : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                  }`}
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`group relative flex items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-4'} py-3 rounded-xl transition-all ${isActive
+                    ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg'
+                    : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                    }`}
                 >
                   {isActive && !collapsed && (
                     <div className="absolute left-0 w-1 h-8 bg-white rounded-r-full"></div>
@@ -442,21 +440,21 @@ const Layout = ({ children }) => {
 
         {/* Sidebar vertical collapse handle */}
         <div className="absolute top-1/2 right-0 transform -translate-y-1/2 hidden lg:block">
-          <button 
-            onClick={() => setCollapsed(c => !c)} 
+          <button
+            onClick={() => setCollapsed(c => !c)}
             className="flex items-center justify-center h-16 w-5 bg-gradient-to-r from-gray-800 to-gray-900 border border-white/10 hover:from-primary-600 hover:to-primary-700 rounded-l-lg shadow-xl transition-all group"
           >
-            <svg className={`h-3 w-3 text-gray-400 group-hover:text-white transform ${collapsed ? 'rotate-180' : ''} transition-all`} viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"/></svg>
+            <svg className={`h-3 w-3 text-gray-400 group-hover:text-white transform ${collapsed ? 'rotate-180' : ''} transition-all`} viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
           </button>
         </div>
         {/* Logout */}
         <div className={`border-t border-white/10 p-3 ${collapsed ? 'px-2' : 'px-4'}`}>
-          <button 
-            onClick={handleLogout} 
+          <button
+            onClick={handleLogout}
             className={`group w-full flex items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-4'} py-3 text-sm font-bold text-gray-300 hover:bg-red-500/20 hover:text-red-400 rounded-xl transition-all border-2 border-transparent hover:border-red-500/30`}
           >
             <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center group-hover:bg-red-500/20 transition-all">
-            <LogOut className="h-5 w-5" />
+              <LogOut className="h-5 w-5" />
             </div>
             <span className={`${collapsed ? 'hidden' : ''} uppercase tracking-wide`}>Logout</span>
           </button>
@@ -492,7 +490,7 @@ const Layout = ({ children }) => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Quick Stats in Header */}
               <div className="hidden xl:flex items-center gap-4 ml-8 pl-8 border-l-2 border-gray-200">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg">
@@ -624,9 +622,8 @@ const Layout = ({ children }) => {
                                     navigate(buildLinkWithHighlight(n));
                                     setNotifOpen(false);
                                   }}
-                                  className={`group w-full text-left px-4 py-3 border-b last:border-0 hover:bg-primary-50 transition-all ${
-                                    n.status === 'unread' ? 'bg-primary-50/30 border-l-4 border-l-primary-600' : 'border-l-4 border-l-transparent'
-                                  }`}
+                                  className={`group w-full text-left px-4 py-3 border-b last:border-0 hover:bg-primary-50 transition-all ${n.status === 'unread' ? 'bg-primary-50/30 border-l-4 border-l-primary-600' : 'border-l-4 border-l-transparent'
+                                    }`}
                                 >
                                   <div className="flex items-start gap-3">
                                     <div className="relative mt-0.5 w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-primary-600 transition-all">
@@ -707,13 +704,13 @@ const Layout = ({ children }) => {
                     <div className="py-2">
                       <button onClick={() => { setUserMenuOpen(false); navigate('/settings'); }} className="w-full text-left px-4 py-3 text-sm font-bold text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors flex items-center gap-3 group">
                         <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-primary-600 transition-all">
-                          <User className="h-4 w-4 text-gray-600 group-hover:text-white transition-colors"/>
+                          <User className="h-4 w-4 text-gray-600 group-hover:text-white transition-colors" />
                         </div>
                         <span>Account Settings</span>
                       </button>
                       <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3 border-t-2 border-gray-100 group">
                         <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center group-hover:bg-red-600 transition-all">
-                          <LogOut className="h-4 w-4 text-red-600 group-hover:text-white transition-colors"/>
+                          <LogOut className="h-4 w-4 text-red-600 group-hover:text-white transition-colors" />
                         </div>
                         <span>Logout</span>
                       </button>
