@@ -38,6 +38,21 @@ const Inventory = () => {
         'Other'
     ];
 
+    const units = [
+        'pieces',
+        'liters',
+        'kg',
+        'meters',
+        'packs',
+        'boxes',
+        'sets',
+        'pairs',
+        'rolls',
+        'gallons',
+        'drums',
+        'cans'
+    ];
+
     const initialFormData = {
         itemName: '',
         itemCode: '',
@@ -650,14 +665,16 @@ const Inventory = () => {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">Unit *</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         required
                                         value={formData.unit}
                                         onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                                        className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-green-500 focus:bg-white transition-all"
-                                        placeholder="e.g., pieces, liters, kg"
-                                    />
+                                        className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-green-500 focus:bg-white transition-all appearance-none cursor-pointer"
+                                    >
+                                        {units.map(unit => (
+                                            <option key={unit} value={unit}>{unit}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
 
