@@ -289,6 +289,7 @@ const Layout = ({ children }) => {
     { name: 'Per Diem', href: '/perdiem', icon: Receipt, roles: ['admin', 'manager', 'user'] },
     { name: 'Logs', href: '/logs', icon: FileText, roles: ['admin', 'manager', 'user'] },
     { name: 'Inventory', href: '/inventory', icon: Package, roles: ['admin', 'manager', 'user'] },
+    { name: 'Spare Parts Requests', href: '/spare-parts', icon: Package, roles: ['admin', 'manager', 'user'] },
     { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager'] },
     { name: 'Settings', href: '/settings', icon: User, roles: ['admin', 'manager', 'user'] },
   ];
@@ -381,7 +382,7 @@ const Layout = ({ children }) => {
             <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Management</span>
           </div>
           <div className="space-y-1.5">
-            {filteredNavigation.filter(i => ['Users', 'Vehicles', 'Map', 'Maintenance', 'Fuel', 'Per Diem', 'Logs', 'Inventory'].includes(i.name)).map(item => {
+            {filteredNavigation.filter(i => ['Users', 'Vehicles', 'Map', 'Maintenance', 'Fuel', 'Per Diem', 'Logs', 'Inventory', 'Spare Parts Requests'].includes(i.name)).map(item => {
               const isActive = location.pathname === item.href;
               return (
                 <Link

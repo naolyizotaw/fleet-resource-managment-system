@@ -130,4 +130,13 @@ export const inventoryAPI = {
   delete: (id) => api.delete(`/api/inventory/${id}`),
 };
 
+// Spare Parts Request API
+export const sparePartsAPI = {
+  create: (data) => api.post('/api/spare-parts', data),
+  getAll: () => api.get('/api/spare-parts'),
+  getMyRequests: () => api.get('/api/spare-parts/my-requests'),
+  updateStatus: (id, data) => api.put(`/api/spare-parts/${id}/status`, data),
+  delete: (id) => api.delete(`/api/spare-parts/${id}`),
+};
+
 export default api;

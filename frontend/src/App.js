@@ -18,6 +18,7 @@ import News from './pages/News';
 import Settings from './pages/Settings';
 import Map from './pages/Map';
 import Inventory from './pages/Inventory';
+import SpareParts from './pages/SpareParts';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -74,6 +75,8 @@ function AppRoutes() {
             <Inventory />
           </ProtectedRoute>
         } />
+        
+        <Route path="/spare-parts" element={<SpareParts />} />
 
         <Route path="/news" element={<News />} />
         <Route path="/settings" element={<Settings />} />
