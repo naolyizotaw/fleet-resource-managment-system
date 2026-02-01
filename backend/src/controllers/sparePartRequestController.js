@@ -46,8 +46,8 @@ const createRequest = async (req, res) => {
 const getAllRequests = async (req, res) => {
   try {
     const requests = await SparePartRequest.find()
-      .populate("itemId", "itemName itemCode currentStock unit")
-      .populate("vehicleId", "plateNumber make model")
+      .populate("itemId", "itemName itemCode currentStock unit unitPrice category")
+      .populate("vehicleId", "plateNumber make model year")
       .populate("requesterId", "username fullName email role")
       .populate("approvedBy", "username fullName role")
       .sort({ createdAt: -1 });
@@ -65,8 +65,8 @@ const getAllRequests = async (req, res) => {
 const getMyRequests = async (req, res) => {
   try {
     const requests = await SparePartRequest.find({ requesterId: req.user.id })
-      .populate("itemId", "itemName itemCode unit")
-      .populate("vehicleId", "plateNumber make model")
+      .populate("itemId", "itemName itemCode unit unitPrice category")
+      .populate("vehicleId", "plateNumber make model year")
       .populate("requesterId", "username fullName email role")
       .populate("approvedBy", "username fullName role")
       .sort({ createdAt: -1 });
@@ -146,34 +146,34 @@ const updateRequestStatus = async (req, res) => {
 // @route DELETE /api/spare-parts/:id
 // @access Owner (Driver/Mechanic) or Admin
 const deleteRequest = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const request = await SparePartRequest.findById(id);
+  try {
+    const { id } = req.params;
+    const request = await SparePartRequest.findById(id);
 
-        if (!request) {
-            return res.status(404).json({ message: "Request not found" });
-        }
-
-        // Check ownership or admin role
-        // Assuming req.user.role is available. 
-        // If the user is not the owner AND not an admin/manager, forbid.
-        if (request.requesterId.toString() !== req.user.id && !['admin', 'manager'].includes(req.user.role)) {
-             return res.status(403).json({ message: "Not authorized to delete this request" });
-        }
-
-        if (request.status !== "pending") {
-            return res.status(400).json({ message: "Cannot delete a processed request" });
-        }
-
-        await SparePartRequest.findByIdAndDelete(id); 
-        // OR request.deleteOne(); depending on mongoose version, findByIdAndDelete is safer usually.
-
-        res.status(200).json({ message: "Request deleted successfully" });
-
-    } catch (error) {
-        console.error("Error deleting request:", error);
-        res.status(500).json({ message: "Server error" });
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
     }
+
+    // Check ownership or admin role
+    // Assuming req.user.role is available. 
+    // If the user is not the owner AND not an admin/manager, forbid.
+    if (request.requesterId.toString() !== req.user.id && !['admin', 'manager'].includes(req.user.role)) {
+      return res.status(403).json({ message: "Not authorized to delete this request" });
+    }
+
+    if (request.status !== "pending") {
+      return res.status(400).json({ message: "Cannot delete a processed request" });
+    }
+
+    await SparePartRequest.findByIdAndDelete(id);
+    // OR request.deleteOne(); depending on mongoose version, findByIdAndDelete is safer usually.
+
+    res.status(200).json({ message: "Request deleted successfully" });
+
+  } catch (error) {
+    console.error("Error deleting request:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 }
 
 module.exports = {

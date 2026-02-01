@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { sparePartsAPI, inventoryAPI, vehiclesAPI } from '../services/api';
 import {
     Package, Plus, Search, Filter, CheckCircle, XCircle, Clock,
-    Truck, AlertCircle, X, Check, BarChart3
+    Truck, AlertCircle, X, Check, BarChart3, Printer
 } from 'lucide-react';
 
 const SpareParts = () => {
@@ -31,6 +31,13 @@ const SpareParts = () => {
     const [showActionModal, setShowActionModal] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [actionType, setActionType] = useState(''); // 'approved' or 'rejected'
+    const [showPrintModal, setShowPrintModal] = useState(false);
+    const [printRequest, setPrintRequest] = useState(null);
+
+    // Helper function to format price with commas
+    const formatPrice = (price) => {
+        return parseFloat(price || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    };
 
     const canManage = () => ['admin', 'manager'].includes(user?.role);
 
@@ -119,6 +126,15 @@ const SpareParts = () => {
         setShowActionModal(true);
     };
 
+    const handlePrint = (request) => {
+        setPrintRequest(request);
+        setShowPrintModal(true);
+    };
+
+    const printInvoice = () => {
+        window.print();
+    };
+
     const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this requests?")) return;
         try {
@@ -175,8 +191,8 @@ const SpareParts = () => {
                 <div className={`mb-4 p-3 rounded-md ${alert.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`} role="alert">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2">
-                             {alert.type === 'success' ? <CheckCircle className="w-5 h-5"/> : <AlertCircle className="w-5 h-5"/>}
-                             {alert.message}
+                            {alert.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                            {alert.message}
                         </div>
                         <button onClick={() => setAlert({ type: '', message: '' })} className="ml-4 text-sm underline">Dismiss</button>
                     </div>
@@ -230,8 +246,8 @@ const SpareParts = () => {
                 </div>
             </div>
 
-             {/* Statistics Cards */}
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-white rounded-xl shadow-md border-2 border-blue-100 p-6">
                     <div className="flex items-center justify-between">
                         <div>
@@ -285,20 +301,18 @@ const SpareParts = () => {
             <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
                 <div className="flex flex-col md:flex-row gap-4">
                     {canManage() && (
-                         <div className="flex bg-gray-100 p-1 rounded-xl w-fit h-fit self-center">
+                        <div className="flex bg-gray-100 p-1 rounded-xl w-fit h-fit self-center">
                             <button
                                 onClick={() => setActiveTab('all_requests')}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                                    activeTab === 'all_requests' ? 'bg-white shadow-sm text-green-700' : 'text-gray-500 hover:text-gray-700'
-                                }`}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'all_requests' ? 'bg-white shadow-sm text-green-700' : 'text-gray-500 hover:text-gray-700'
+                                    }`}
                             >
                                 All Requests
                             </button>
                             <button
                                 onClick={() => setActiveTab('my_requests')}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                                    activeTab === 'my_requests' ? 'bg-white shadow-sm text-green-700' : 'text-gray-500 hover:text-gray-700'
-                                }`}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'my_requests' ? 'bg-white shadow-sm text-green-700' : 'text-gray-500 hover:text-gray-700'
+                                    }`}
                             >
                                 My Requests
                             </button>
@@ -344,7 +358,7 @@ const SpareParts = () => {
                     <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600"></div>
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <div className="flex items-center gap-4">
-                             <div className="relative">
+                            <div className="relative">
                                 <div className="absolute inset-0 bg-gradient-to-br from-green-600 to-emerald-600 rounded-xl blur opacity-30"></div>
                                 <div className="relative w-12 h-12 bg-gradient-to-br from-green-600 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
                                     <Truck className="h-6 w-6 text-white" />
@@ -369,6 +383,8 @@ const SpareParts = () => {
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Requested By</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Date Requested</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Quantity</th>
+                                <th className="px-6 py-4 text-right text-xs font-black text-gray-700 uppercase tracking-wider">Unit Price</th>
+                                <th className="px-6 py-4 text-right text-xs font-black text-gray-700 uppercase tracking-wider">Total Price</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Reason</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Approved By</th>
@@ -379,7 +395,7 @@ const SpareParts = () => {
                         <tbody className="bg-white divide-y divide-gray-200">
                             {filteredRequests.length === 0 ? (
                                 <tr>
-                                    <td colSpan="12" className="px-6 py-12 text-center">
+                                    <td colSpan="14" className="px-6 py-12 text-center">
                                         <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                                         <p className="text-gray-500 font-semibold">No requests found</p>
                                     </td>
@@ -394,10 +410,10 @@ const SpareParts = () => {
                                             <div className="text-sm font-bold text-gray-900">{req.itemId?.itemName}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                             <div className="text-sm font-bold text-gray-900">{req.vehicleId?.make} {req.vehicleId?.model}</div>
+                                            <div className="text-sm font-bold text-gray-900">{req.vehicleId?.make} {req.vehicleId?.model}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                             <div className="text-sm font-bold text-gray-900">{req.vehicleId?.plateNumber}</div>
+                                            <div className="text-sm font-bold text-gray-900">{req.vehicleId?.plateNumber}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-bold text-gray-900">{req.requesterId?.fullName || req.requesterId?.username || 'Unknown'}</div>
@@ -409,16 +425,22 @@ const SpareParts = () => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className="text-sm font-bold text-gray-900">{req.quantity} {req.itemId?.unit}</span>
                                         </td>
-                                         <td className="px-6 py-4">
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            <span className="text-sm font-bold text-gray-900">ETB {formatPrice(req.itemId?.unitPrice)}</span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            <span className="text-sm font-black text-green-600">ETB {formatPrice((req.itemId?.unitPrice || 0) * req.quantity)}</span>
+                                        </td>
+                                        <td className="px-6 py-4">
                                             <div className="text-sm text-gray-700">{req.reason}</div>
-                                             {req.adminComment && (
+                                            {req.adminComment && (
                                                 <div className="text-xs text-red-600 mt-1 font-semibold">
-                                                  Note: {req.adminComment}
+                                                    Note: {req.adminComment}
                                                 </div>
                                             )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                             <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${getStatusColor(req.status)}`}>
+                                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${getStatusColor(req.status)}`}>
                                                 {req.status?.charAt(0).toUpperCase() + req.status?.slice(1)}
                                             </span>
                                         </td>
@@ -430,7 +452,7 @@ const SpareParts = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div className="flex items-center gap-2">
-                                                 {/* Admin Actions */}
+                                                {/* Admin Actions */}
                                                 {canManage() && req.status === 'pending' && (
                                                     <>
                                                         <button
@@ -450,14 +472,25 @@ const SpareParts = () => {
                                                     </>
                                                 )}
 
-                                                  {/* Delete Action (Owner or Admin) */}
+                                                {/* Print Invoice for Approved Requests */}
+                                                {req.status === 'approved' && (
+                                                    <button
+                                                        onClick={() => handlePrint(req)}
+                                                        className="text-blue-600 hover:text-blue-900 transition-colors p-2 hover:bg-blue-100 rounded-lg"
+                                                        title="Print Invoice"
+                                                    >
+                                                        <Printer className="h-5 w-5" />
+                                                    </button>
+                                                )}
+
+                                                {/* Delete Action (Owner or Admin) */}
                                                 {req.status === 'pending' && (canManage() || req.requesterId?._id === user?.id || req.requesterId === user?.id) && (
                                                     <button
                                                         onClick={() => handleDelete(req._id)}
                                                         className="text-gray-400 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-lg"
                                                         title="Delete"
                                                     >
-                                                         <X className="h-5 w-5" />
+                                                        <X className="h-5 w-5" />
                                                     </button>
                                                 )}
                                             </div>
@@ -474,16 +507,16 @@ const SpareParts = () => {
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-                         <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 rounded-t-2xl flex items-center justify-between">
+                        <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 rounded-t-2xl flex items-center justify-between">
                             <h2 className="text-xl font-black text-white uppercase tracking-tight">New Request</h2>
-                             <button
+                            <button
                                 onClick={() => setShowModal(false)}
                                 className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
-                             >
+                            >
                                 <X className="h-6 w-6" />
-                             </button>
+                            </button>
                         </div>
-                        
+
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
                             <div>
                                 <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
@@ -575,15 +608,15 @@ const SpareParts = () => {
             {showActionModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-                         <div className={`px-6 py-4 rounded-t-2xl flex items-center justify-between ${actionType === 'approved' ? 'bg-gradient-to-r from-green-600 to-emerald-600' : 'bg-gradient-to-r from-red-600 to-red-700'}`}>
+                        <div className={`px-6 py-4 rounded-t-2xl flex items-center justify-between ${actionType === 'approved' ? 'bg-gradient-to-r from-green-600 to-emerald-600' : 'bg-gradient-to-r from-red-600 to-red-700'}`}>
                             <h2 className="text-xl font-black text-white uppercase tracking-tight">{actionType === 'approved' ? 'Approve' : 'Reject'} Request</h2>
-                             <button
+                            <button
                                 onClick={() => setShowActionModal(false)}
                                 disabled={!!processingId}
                                 className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
-                             >
+                            >
                                 <X className="h-6 w-6" />
-                             </button>
+                            </button>
                         </div>
 
                         <div className="p-6">
@@ -626,6 +659,231 @@ const SpareParts = () => {
                                 >
                                     {processingId ? 'Processing...' : `Confirm ${actionType === 'approved' ? 'Approval' : 'Rejection'}`}
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Printable Invoice Modal */}
+            {showPrintModal && printRequest && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <style>{`
+                        @media print {
+                            body * {
+                                visibility: hidden;
+                            }
+                            .print-content, .print-content * {
+                                visibility: visible;
+                            }
+                            .print-content {
+                                position: absolute;
+                                left: 0;
+                                top: 0;
+                                width: 100%;
+                            }
+                            .no-print {
+                                display: none !important;
+                            }
+                            .print-page {
+                                page-break-after: always;
+                            }
+                        }
+                    `}</style>
+
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                        {/* Modal Header - Hidden when printing */}
+                        <div className="no-print sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 rounded-t-2xl flex items-center justify-between z-10">
+                            <h2 className="text-xl font-black text-white uppercase tracking-tight">Spare Parts Request Invoice</h2>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={printInvoice}
+                                    className="px-4 py-2 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2"
+                                >
+                                    <Printer className="h-4 w-4" />
+                                    Print
+                                </button>
+                                <button
+                                    onClick={() => setShowPrintModal(false)}
+                                    className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                                >
+                                    <X className="h-6 w-6" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Printable Content */}
+                        <div className="print-content p-12">
+                            {/* Company Header */}
+                            <div className="border-b-4 border-gray-800 pb-8 mb-8">
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <h1 className="text-3xl font-bold text-gray-900 mb-1" style={{ letterSpacing: '0.5px' }}>FLEET MANAGEMENT SYSTEM</h1>
+                                        <p className="text-gray-600 font-medium text-sm">Transportation & Logistics Division</p>
+                                        <p className="text-gray-500 text-xs mt-1">Addis Ababa, Ethiopia</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="bg-gray-900 text-white px-6 py-3 inline-block">
+                                            <p className="text-xs font-semibold uppercase tracking-wide mb-1">Document Status</p>
+                                            <p className="text-xl font-bold">APPROVED</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Document Title */}
+                            <div className="mb-8 text-center border-b border-gray-300 pb-4">
+                                <h2 className="text-2xl font-bold text-gray-900 uppercase" style={{ letterSpacing: '1px' }}>Spare Parts Request Confirmation</h2>
+                                <p className="text-sm text-gray-600 mt-1">Official Authorization Document</p>
+                            </div>
+
+                            {/* Invoice Details */}
+                            <div className="grid grid-cols-2 gap-8 mb-8">
+                                <div className="border border-gray-300 p-5">
+                                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-4 pb-2 border-b border-gray-300">Request Information</h3>
+                                    <div className="space-y-2.5">
+                                        <div className="flex justify-between">
+                                            <span className="text-sm text-gray-600">Request ID:</span>
+                                            <span className="text-sm font-bold text-gray-900">{printRequest._id?.slice(-8).toUpperCase()}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-sm text-gray-600">Request Date:</span>
+                                            <span className="text-sm font-bold text-gray-900">{new Date(printRequest.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-sm text-gray-600">Approval Date:</span>
+                                            <span className="text-sm font-bold text-gray-900">{printRequest.approvedAt ? new Date(printRequest.approvedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="border border-gray-300 p-5">
+                                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-4 pb-2 border-b border-gray-300">Personnel Details</h3>
+                                    <div className="space-y-2.5">
+                                        <div className="flex justify-between">
+                                            <span className="text-sm text-gray-600">Requested By:</span>
+                                            <span className="text-sm font-bold text-gray-900">{printRequest.requesterId?.fullName || printRequest.requesterId?.username || 'Unknown'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-sm text-gray-600">Role:</span>
+                                            <span className="text-sm font-bold text-gray-900 uppercase">{printRequest.requesterId?.role || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-sm text-gray-600">Approved By:</span>
+                                            <span className="text-sm font-bold text-gray-900">{printRequest.approvedBy?.fullName || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Vehicle Information */}
+                            <div className="bg-gray-50 border border-gray-300 p-6 mb-8">
+                                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center gap-2">
+                                    <Truck className="h-4 w-4" />
+                                    Vehicle Information
+                                </h3>
+                                <div className="grid grid-cols-3 gap-6">
+                                    <div>
+                                        <p className="text-xs text-gray-600 uppercase mb-1">Plate Number</p>
+                                        <p className="text-base font-bold text-gray-900">{printRequest.vehicleId?.plateNumber || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-600 uppercase mb-1">Make & Model</p>
+                                        <p className="text-base font-bold text-gray-900">{printRequest.vehicleId?.make} {printRequest.vehicleId?.model}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-600 uppercase mb-1">Year</p>
+                                        <p className="text-base font-bold text-gray-900">{printRequest.vehicleId?.year || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Parts Details Table */}
+                            <div className="mb-8">
+                                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center gap-2">
+                                    <Package className="h-4 w-4" />
+                                    Spare Parts Details
+                                </h3>
+                                <table className="w-full border border-gray-400">
+                                    <thead className="bg-gray-800 text-white">
+                                        <tr>
+                                            <th className="border border-gray-400 px-4 py-3 text-left text-xs font-bold uppercase">Item Code</th>
+                                            <th className="border border-gray-400 px-4 py-3 text-left text-xs font-bold uppercase">Item Name</th>
+                                            <th className="border border-gray-400 px-4 py-3 text-left text-xs font-bold uppercase">Category</th>
+                                            <th className="border border-gray-400 px-4 py-3 text-center text-xs font-bold uppercase">Quantity</th>
+                                            <th className="border border-gray-400 px-4 py-3 text-left text-xs font-bold uppercase">Unit</th>
+                                            <th className="border border-gray-400 px-4 py-3 text-right text-xs font-bold uppercase">Unit Price</th>
+                                            <th className="border border-gray-400 px-4 py-3 text-right text-xs font-bold uppercase">Total Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr className="bg-white">
+                                            <td className="border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-900">{printRequest.itemId?.itemCode || 'N/A'}</td>
+                                            <td className="border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-900">{printRequest.itemId?.itemName || 'N/A'}</td>
+                                            <td className="border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-900">{printRequest.itemId?.category || 'N/A'}</td>
+                                            <td className="border border-gray-300 px-4 py-3 text-center text-base font-bold text-gray-900">{printRequest.quantity}</td>
+                                            <td className="border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-900">{printRequest.itemId?.unit || 'N/A'}</td>
+                                            <td className="border border-gray-300 px-4 py-3 text-right text-sm font-semibold text-gray-900">
+                                                ETB {formatPrice(printRequest.itemId?.unitPrice)}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-3 text-right text-base font-bold text-gray-900">
+                                                ETB {formatPrice((printRequest.itemId?.unitPrice || 0) * printRequest.quantity)}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                {/* Total Summary */}
+                                <div className="mt-6 flex justify-end">
+                                    <div className="border-2 border-gray-800 bg-gray-50 p-6 min-w-[350px]">
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center pb-3 border-b-2 border-gray-300">
+                                                <span className="text-sm font-semibold text-gray-700 uppercase">Subtotal:</span>
+                                                <span className="text-lg font-bold text-gray-900">ETB {formatPrice((printRequest.itemId?.unitPrice || 0) * printRequest.quantity)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center pt-3 border-t-2 border-gray-900">
+                                                <span className="text-base font-bold text-gray-900 uppercase">Grand Total:</span>
+                                                <span className="text-2xl font-bold text-gray-900">ETB {formatPrice((printRequest.itemId?.unitPrice || 0) * printRequest.quantity)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Request Reason */}
+                            <div className="bg-gray-50 border border-gray-300 p-6 mb-8">
+                                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-3">Request Reason</h3>
+                                <p className="text-sm text-gray-800 leading-relaxed">{printRequest.reason}</p>
+                            </div>
+
+                            {/* Admin Comment if exists */}
+                            {printRequest.adminComment && (
+                                <div className="bg-gray-50 border border-gray-300 p-6 mb-8">
+                                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-3">Administrator Notes</h3>
+                                    <p className="text-sm text-gray-800 leading-relaxed">{printRequest.adminComment}</p>
+                                </div>
+                            )}
+
+                            {/* Signatures Section */}
+                            <div className="grid grid-cols-2 gap-12 mt-12 pt-8 border-t border-gray-300">
+                                <div>
+                                    <div className="border-b border-gray-400 pb-1 mb-2 h-16"></div>
+                                    <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">Requester Signature</p>
+                                    <p className="text-xs text-gray-500 mt-1">{printRequest.requesterId?.fullName || printRequest.requesterId?.username}</p>
+                                    <p className="text-xs text-gray-500">Date: {new Date(printRequest.createdAt).toLocaleDateString()}</p>
+                                </div>
+                                <div>
+                                    <div className="border-b border-gray-400 pb-1 mb-2 h-16"></div>
+                                    <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">Approver Signature</p>
+                                    <p className="text-xs text-gray-500 mt-1">{printRequest.approvedBy?.fullName || 'N/A'}</p>
+                                    <p className="text-xs text-gray-500">Date: {printRequest.approvedAt ? new Date(printRequest.approvedAt).toLocaleDateString() : 'N/A'}</p>
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="mt-12 pt-6 border-t border-gray-200 text-center">
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Fleet Resource Management System • Official Document</p>
+                                <p className="text-[10px] text-gray-400 mt-1">Generated on {new Date().toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                             </div>
                         </div>
                     </div>
