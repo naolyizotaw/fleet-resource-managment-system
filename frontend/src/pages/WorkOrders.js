@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { workOrdersAPI, maintenanceAPI, usersAPI, inventoryAPI } from '../services/api';
-import { ClipboardList, Plus, Search, Filter, Wrench, User, Package, DollarSign, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { ClipboardList, Plus, Search, Filter, Wrench, User, Package, DollarSign, CheckCircle, Clock, XCircle, Printer, BarChart3, AlertCircle, X } from 'lucide-react';
+import WorkOrderPrintTemplate from '../components/WorkOrderPrintTemplate';
 
 const WorkOrders = () => {
     const { user } = useAuth();
@@ -179,6 +180,10 @@ const WorkOrders = () => {
         }
     };
 
+    const handlePrint = () => {
+        window.print();
+    };
+
     const getStatusBadge = (status) => {
         const colors = {
             open: 'bg-blue-100 text-blue-800',
@@ -207,10 +212,20 @@ const WorkOrders = () => {
         return matchesSearch && matchesStatus;
     });
 
+    const getStats = () => {
+        const total = workOrders.length;
+        const open = workOrders.filter(wo => wo.status === 'open').length;
+        const inProgress = workOrders.filter(wo => wo.status === 'in_progress').length;
+        const completed = workOrders.filter(wo => wo.status === 'completed').length;
+        return { total, open, inProgress, completed };
+    };
+
+    const stats = getStats();
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
         );
     }
@@ -218,43 +233,116 @@ const WorkOrders = () => {
     return (
         <div className="space-y-6">
             {alert.message && (
-                <div className={`mb-4 p-3 rounded-md ${alert.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+                <div className={`mb-4 p-3 rounded-md ${alert.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`} role="alert">
                     <div className="flex justify-between items-center">
-                        <div>{alert.message}</div>
+                        <div className="flex items-center gap-2">
+                            {alert.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+                            {alert.message}
+                        </div>
                         <button onClick={() => setAlert({ type: '', message: '' })} className="ml-4 text-sm underline">Dismiss</button>
                     </div>
                 </div>
             )}
 
-            {/* Header */}
-            <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-xl shadow-xl border border-slate-700 overflow-hidden px-6 py-4">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1 h-1 bg-primary-500 rounded-full"></div>
-                    <span className="text-[9px] uppercase tracking-[0.15em] font-black text-slate-400">Work Order Management</span>
-                </div>
+            {/* Page Header */}
+            <div className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 rounded-2xl shadow-2xl overflow-hidden">
+                <div className="absolute inset-0 opacity-10" style={{
+                    backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+                    backgroundSize: '30px 30px'
+                }}></div>
 
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight mb-1">Work Orders</h1>
-                        <div className="flex items-center gap-3 text-xs">
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                                <span className="text-slate-400 font-semibold">Live Data</span>
+                <div className="relative px-8 py-8">
+                    <div className="flex items-center justify-between flex-wrap gap-6">
+                        <div className="flex items-center gap-5">
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-white rounded-2xl blur-xl opacity-30"></div>
+                                <div className="relative w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border-2 border-white/30 shadow-2xl">
+                                    <ClipboardList className="h-8 w-8 text-white" />
+                                </div>
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="h-px w-10 bg-white/40"></div>
+                                    <span className="text-[10px] uppercase tracking-[0.15em] font-black text-white/70">Work Orders</span>
+                                </div>
+                                <h1 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tight mb-1">
+                                    Management Dashboard
+                                </h1>
+                                <p className="text-white/80 font-semibold text-sm">Track and manage all vehicle maintenance work orders</p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => setShowConvertModal(true)}
+                                className="group relative px-6 py-3 bg-white text-blue-600 font-black uppercase tracking-wide rounded-xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all flex items-center gap-2 overflow-hidden"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                <Plus className="h-5 w-5 relative z-10" />
+                                <span className="text-sm relative z-10">Convert Maintenance</span>
+                            </button>
+
+                            <div className="flex items-center justify-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                                <ClipboardList className="h-4 w-4 text-white" />
+                                <span className="text-sm font-bold text-white">{filteredWorkOrders.length} Work Orders</span>
                             </div>
                         </div>
                     </div>
-
-                    <button
-                        onClick={() => setShowConvertModal(true)}
-                        className="group relative px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold uppercase tracking-wide rounded-lg transition-all flex items-center gap-2 border border-slate-600"
-                    >
-                        <Plus size={16} />
-                        <span className="text-xs">Convert Maintenance</span>
-                    </button>
                 </div>
             </div>
 
-            {/* Filters */}
+            {/* Statistics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-white rounded-xl shadow-md border-2 border-blue-100 p-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-black text-gray-600 uppercase tracking-wider mb-1">Total</p>
+                            <p className="text-3xl font-black text-gray-900">{stats.total}</p>
+                        </div>
+                        <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <BarChart3 className="h-7 w-7 text-white" />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-md border-2 border-cyan-100 p-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-black text-gray-600 uppercase tracking-wider mb-1">Open</p>
+                            <p className="text-3xl font-black text-gray-900">{stats.open}</p>
+                        </div>
+                        <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <Clock className="h-7 w-7 text-white" />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-md border-2 border-yellow-100 p-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-black text-gray-600 uppercase tracking-wider mb-1">In Progress</p>
+                            <p className="text-3xl font-black text-gray-900">{stats.inProgress}</p>
+                        </div>
+                        <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <Wrench className="h-7 w-7 text-white" />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-md border-2 border-green-100 p-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-black text-gray-600 uppercase tracking-wider mb-1">Completed</p>
+                            <p className="text-3xl font-black text-gray-900">{stats.completed}</p>
+                        </div>
+                        <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <CheckCircle className="h-7 w-7 text-white" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filters and Search */}
             <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="flex-1">
@@ -263,26 +351,26 @@ const WorkOrders = () => {
                             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="Search by WO number, vehicle, description..."
+                                placeholder="Search work orders..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
+                                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                             />
                         </div>
                     </div>
-                    <div className="md:w-64">
-                        <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Filter Status</label>
+
+                    <div className="md:w-56">
+                        <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Status</label>
                         <div className="relative">
                             <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all appearance-none cursor-pointer"
+                                className="w-full pl-12 pr-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all appearance-none cursor-pointer"
                             >
                                 <option value="all">All Status</option>
                                 <option value="open">Open</option>
                                 <option value="in_progress">In Progress</option>
-                                <option value="on_hold">On Hold</option>
                                 <option value="completed">Completed</option>
                                 <option value="cancelled">Cancelled</option>
                             </select>
@@ -292,117 +380,138 @@ const WorkOrders = () => {
             </div>
 
             {/* Work Orders Table */}
-            <div className="bg-gradient-to-br from-white via-primary-50/30 to-white rounded-2xl shadow-lg border border-primary-100 overflow-hidden">
-                <div className="relative bg-white px-6 py-6 border-b-4 border-primary-600">
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-600 via-primary-500 to-primary-600"></div>
+            <div className="bg-white rounded-2xl shadow-xl border-2 border-blue-100 overflow-hidden">
+                <div className="relative bg-gradient-to-r from-white via-blue-50 to-white px-6 py-6 border-b-4 border-blue-500">
+                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700"></div>
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <div className="flex items-center gap-4">
                             <div className="relative">
-                                <div className="absolute inset-0 bg-primary-600 rounded-xl blur opacity-30"></div>
-                                <div className="relative w-12 h-12 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg">
-                                    <ClipboardList className="h-6 w-6 text-white" />
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl blur opacity-30"></div>
+                                <div className="relative w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                                    <Wrench className="h-6 w-6 text-white" />
                                 </div>
                             </div>
                             <div>
-                                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Work Orders</h3>
-                                <p className="text-xs text-gray-500 font-bold mt-0.5">Manage and track all work orders</p>
+                                <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">All Work Orders</h3>
+                                <p className="text-xs text-blue-600 font-bold mt-0.5">Track and manage approvals</p>
                             </div>
-                        </div>
-                        <div className="flex items-center gap-3 px-4 py-2 bg-primary-50 rounded-lg border border-primary-200">
-                            <div className="w-2 h-2 bg-primary-600 rounded-full animate-pulse"></div>
-                            <span className="text-sm font-black text-primary-700">{filteredWorkOrders.length} Total</span>
                         </div>
                     </div>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="min-w-full">
-                        <thead>
-                            <tr className="bg-gradient-to-r from-gray-50 to-primary-50/50">
-                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">WO Number</th>
-                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Vehicle</th>
-                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Status</th>
-                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Mechanics</th>
-                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Total Cost</th>
-                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Actions</th>
+                        <thead className="bg-gradient-to-r from-gray-50 to-blue-50 border-b-2 border-blue-200">
+                            <tr>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">WO Number</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Plate Number</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Vehicle</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Priority</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Created Date</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Created By</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Completed Date</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Mechanics</th>
+                                <th className="px-6 py-4 text-right text-xs font-black text-gray-700 uppercase tracking-wider">Total Cost</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white/80 backdrop-blur-sm">
-                            {filteredWorkOrders.map((wo) => (
-                                <tr
-                                    key={wo._id}
-                                    ref={(el) => { if (el) rowRefs.current[wo._id] = el; }}
-                                    className={`group hover:bg-primary-50 hover:shadow-sm transition-all border-b border-gray-100 ${highlightedId === wo._id ? 'bg-yellow-50 ring-2 ring-amber-400' : ''}`}
-                                >
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            {getStatusIcon(wo.status)}
-                                            <div>
-                                                <div className="text-sm font-bold text-gray-900 cursor-pointer hover:text-blue-600" onClick={() => { setSelectedWorkOrder(wo); setShowDetailsModal(true); }}>
-                                                    {wo.workOrderNumber}
-                                                </div>
-                                                <div className="text-xs text-gray-500">{new Date(wo.createdAt).toLocaleDateString()}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="text-sm text-gray-900">{wo.vehicleId?.plateNumber || '-'}</div>
-                                        <div className="text-xs text-gray-500">{wo.vehicleId?.manufacturer} {wo.vehicleId?.model}</div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(wo.status)}`}>
-                                            {wo.status.replace('_', ' ')}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="text-sm text-gray-900">
-                                            {wo.assignedMechanics?.length > 0 ? wo.assignedMechanics.map(m => m.fullName || m.username).join(', ') : 'Not assigned'}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="text-sm font-bold text-gray-900">ETB {wo.totalCost?.toLocaleString() || '0'}</div>
-                                        <div className="text-xs text-gray-500">Parts: {wo.totalPartsCost?.toLocaleString() || '0'} | Labor: {wo.totalLaborCost?.toLocaleString() || '0'}</div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-wrap gap-2">
-                                            {wo.status !== 'completed' && wo.status !== 'cancelled' && (
-                                                <>
-                                                    <button onClick={() => { setSelectedWorkOrder(wo); setShowAssignModal(true); }} className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100" title="Assign Mechanic">
-                                                        <User size={14} />
-                                                    </button>
-                                                    <button onClick={() => { setSelectedWorkOrder(wo); setShowPartsModal(true); }} className="px-2 py-1 text-xs bg-purple-50 text-purple-700 rounded hover:bg-purple-100" title="Add Parts">
-                                                        <Package size={14} />
-                                                    </button>
-                                                    <button onClick={() => { setSelectedWorkOrder(wo); setShowLaborModal(true); }} className="px-2 py-1 text-xs bg-green-50 text-green-700 rounded hover:bg-green-100" title="Add Labor">
-                                                        <DollarSign size={14} />
-                                                    </button>
-                                                    <button onClick={() => { setSelectedWorkOrder(wo); setShowProgressModal(true); }} className="px-2 py-1 text-xs bg-yellow-50 text-yellow-700 rounded hover:bg-yellow-100" title="Update Progress">
-                                                        <Wrench size={14} />
-                                                    </button>
-                                                    <button onClick={() => { setSelectedWorkOrder(wo); setShowCompleteModal(true); }} className="px-2 py-1 text-xs bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100" title="Complete">
-                                                        <CheckCircle size={14} />
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {filteredWorkOrders.length === 0 ? (
+                                <tr>
+                                    <td colSpan="11" className="px-6 py-12 text-center">
+                                        <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                                        <p className="text-gray-500 font-semibold">No work orders found</p>
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                filteredWorkOrders.map((wo) => (
+                                    <tr
+                                        key={wo._id}
+                                        ref={(el) => { if (el) rowRefs.current[wo._id] = el; }}
+                                        className={`hover:bg-blue-50 transition-colors ${highlightedId === wo._id ? 'bg-yellow-50 ring-2 ring-amber-400' : ''}`}
+                                    >
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center gap-2">
+                                                {getStatusIcon(wo.status)}
+                                                <div>
+                                                    <div className="text-sm font-bold text-gray-900 cursor-pointer hover:text-blue-600" onClick={() => { setSelectedWorkOrder(wo); setShowDetailsModal(true); }}>
+                                                        {wo.workOrderNumber}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-bold text-gray-900">{wo.vehicleId?.plateNumber || '-'}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-bold text-gray-900">{wo.vehicleId?.make} {wo.vehicleId?.model}</div>
+                                            <div className="text-xs text-gray-500">Year: {wo.vehicleId?.year || 'N/A'}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${getStatusBadge(wo.status)}`}>
+                                                {wo.status.replace('_', ' ').charAt(0).toUpperCase() + wo.status.replace('_', ' ').slice(1)}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="text-sm font-bold text-gray-900 capitalize">{wo.priority || '-'}</span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-bold text-gray-900">{new Date(wo.createdAt).toLocaleDateString()}</div>
+                                            <div className="text-xs text-gray-500">{new Date(wo.createdAt).toLocaleTimeString()}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-bold text-gray-900">{wo.createdBy?.fullName || wo.createdBy?.username || 'N/A'}</div>
+                                            <div className="text-xs text-gray-500">{wo.createdBy?.role || ''}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            {wo.completedAt ? (
+                                                <>
+                                                    <div className="text-sm font-bold text-green-600">{new Date(wo.completedAt).toLocaleDateString()}</div>
+                                                    <div className="text-xs text-gray-500">{new Date(wo.completedAt).toLocaleTimeString()}</div>
+                                                </>
+                                            ) : (
+                                                <span className="text-sm text-gray-400">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-bold text-gray-900">
+                                                {wo.assignedMechanics?.length > 0 ? wo.assignedMechanics.map(m => m.fullName || m.username).join(', ') : 'Not assigned'}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            <div className="text-sm font-black text-blue-600">ETB {wo.totalCost?.toLocaleString() || '0'}</div>
+                                            <div className="text-xs text-gray-500">P: {wo.totalPartsCost?.toLocaleString() || '0'} | L: {wo.totalLaborCost?.toLocaleString() || '0'}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <div className="flex items-center gap-2">
+                                                {wo.status !== 'completed' && wo.status !== 'cancelled' && (
+                                                    <>
+                                                        <button onClick={() => { setSelectedWorkOrder(wo); setShowAssignModal(true); }} className="text-blue-600 hover:text-blue-900 transition-colors p-2 hover:bg-blue-100 rounded-lg" title="Assign Mechanic">
+                                                            <User className="h-5 w-5" />
+                                                        </button>
+                                                        <button onClick={() => { setSelectedWorkOrder(wo); setShowPartsModal(true); }} className="text-purple-600 hover:text-purple-900 transition-colors p-2 hover:bg-purple-100 rounded-lg" title="Add Parts">
+                                                            <Package className="h-5 w-5" />
+                                                        </button>
+                                                        <button onClick={() => { setSelectedWorkOrder(wo); setShowLaborModal(true); }} className="text-green-600 hover:text-green-900 transition-colors p-2 hover:bg-green-100 rounded-lg" title="Add Labor">
+                                                            <DollarSign className="h-5 w-5" />
+                                                        </button>
+                                                        <button onClick={() => { setSelectedWorkOrder(wo); setShowProgressModal(true); }} className="text-yellow-600 hover:text-yellow-900 transition-colors p-2 hover:bg-yellow-100 rounded-lg" title="Update Progress">
+                                                            <Wrench className="h-5 w-5" />
+                                                        </button>
+                                                        <button onClick={() => { setSelectedWorkOrder(wo); setShowCompleteModal(true); }} className="text-emerald-600 hover:text-emerald-900 transition-colors p-2 hover:bg-emerald-100 rounded-lg" title="Complete">
+                                                            <CheckCircle className="h-5 w-5" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
-
-                {filteredWorkOrders.length === 0 && (
-                    <div className="text-center py-16 px-4">
-                        <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-2xl mb-4">
-                            <ClipboardList className="h-10 w-10 text-gray-400" />
-                        </div>
-                        <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-2">No work orders found</h3>
-                        <p className="text-sm text-gray-500 font-medium">
-                            {searchTerm || statusFilter !== 'all' ? 'Try adjusting your search or filter criteria.' : 'Convert an approved maintenance request to create a work order.'}
-                        </p>
-                    </div>
-                )}
             </div>
 
             {/* Convert Modal */}
@@ -411,15 +520,21 @@ const WorkOrders = () => {
                     <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20">
                         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowConvertModal(false)} />
                         <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-200 relative z-10">
-                            <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-5">
-                                <h3 className="text-xl font-black text-white uppercase">Convert to Work Order</h3>
+                            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 rounded-t-2xl flex items-center justify-between">
+                                <h2 className="text-xl font-black text-white uppercase tracking-tight">Convert to Work Order</h2>
+                                <button
+                                    onClick={() => setShowConvertModal(false)}
+                                    className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                                >
+                                    <X className="h-6 w-6" />
+                                </button>
                             </div>
                             <div className="bg-white px-6 py-6">
-                                <label className="block text-xs font-black text-gray-600 uppercase mb-2">Select Approved Maintenance Request</label>
+                                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">Select Approved Maintenance Request</label>
                                 <select
                                     value={selectedMaintenance}
                                     onChange={(e) => setSelectedMaintenance(e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold"
+                                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                                 >
                                     <option value="">Select...</option>
                                     {maintenanceRequests.map(m => (
@@ -430,8 +545,8 @@ const WorkOrders = () => {
                                 </select>
                             </div>
                             <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3">
-                                <button onClick={() => setShowConvertModal(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold">Cancel</button>
-                                <button onClick={handleConvert} className="px-4 py-2 bg-primary-600 text-white rounded-lg font-bold">Convert</button>
+                                <button onClick={() => setShowConvertModal(false)} className="px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-colors">Cancel</button>
+                                <button onClick={handleConvert} className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all">Convert</button>
                             </div>
                         </div>
                     </div>
@@ -641,117 +756,260 @@ const WorkOrders = () => {
                             <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-5 sticky top-0 z-10">
                                 <div className="flex justify-between items-center">
                                     <h3 className="text-xl font-black text-white uppercase">Work Order Details</h3>
-                                    <button onClick={() => setShowDetailsModal(false)} className="text-white hover:bg-white/20 rounded p-2">×</button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={handlePrint}
+                                            className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all font-bold text-sm uppercase tracking-wide"
+                                        >
+                                            <Printer size={16} />
+                                            <span>Print</span>
+                                        </button>
+                                        <button onClick={() => setShowDetailsModal(false)} className="text-white hover:bg-white/20 rounded p-2 text-2xl leading-none">×</button>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="bg-white px-6 py-6 space-y-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <div className="text-xs font-black text-gray-600 uppercase">WO Number</div>
-                                        <div className="text-lg font-bold">{selectedWorkOrder.workOrderNumber}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-black text-gray-600 uppercase">Status</div>
-                                        <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusBadge(selectedWorkOrder.status)}`}>
-                                            {selectedWorkOrder.status.replace('_', ' ')}
-                                        </span>
+                            <div className="bg-white px-8 py-8">
+                                {/* Company Header Section */}
+                                <div className="border-b-4 border-primary-600 pb-5 mb-6">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h1 className="text-3xl font-black text-gray-900 uppercase tracking-wide mb-2">
+                                                FleetPro Management
+                                            </h1>
+                                            <p className="text-xs text-gray-500 uppercase tracking-widest">
+                                                Fleet Resource Management System
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                                                Work Order
+                                            </div>
+                                            <div className="text-2xl font-black text-primary-600">
+                                                {selectedWorkOrder.workOrderNumber}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <div className="text-xs font-black text-gray-600 uppercase mb-2">Description</div>
-                                    <div className="text-sm">{selectedWorkOrder.description}</div>
-                                </div>
-
-                                {selectedWorkOrder.spareParts?.length > 0 && (
+                                {/* Work Order Info & Vehicle Info */}
+                                <div className="grid grid-cols-2 gap-6 mb-6">
                                     <div>
-                                        <div className="text-xs font-black text-gray-600 uppercase mb-2">Spare Parts Used</div>
+                                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-wide mb-3">
+                                            Work Order Information
+                                        </h3>
                                         <table className="w-full text-sm">
+                                            <tbody>
+                                                <tr>
+                                                    <td className="py-2 text-gray-600 font-semibold">Status:</td>
+                                                    <td className="py-2">
+                                                        <span className={`inline-flex px-2 py-1 text-xs font-bold rounded-full ${getStatusBadge(selectedWorkOrder.status)}`}>
+                                                            {selectedWorkOrder.status.replace('_', ' ').toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2 text-gray-600 font-semibold">Priority:</td>
+                                                    <td className="py-2 font-bold capitalize">{selectedWorkOrder.priority}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2 text-gray-600 font-semibold">Category:</td>
+                                                    <td className="py-2">{selectedWorkOrder.category || '-'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2 text-gray-600 font-semibold">Created:</td>
+                                                    <td className="py-2">{new Date(selectedWorkOrder.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</td>
+                                                </tr>
+                                                {selectedWorkOrder.startedDate && (
+                                                    <tr>
+                                                        <td className="py-2 text-gray-600 font-semibold">Started:</td>
+                                                        <td className="py-2">{new Date(selectedWorkOrder.startedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</td>
+                                                    </tr>
+                                                )}
+                                                {selectedWorkOrder.completedDate && (
+                                                    <tr>
+                                                        <td className="py-2 text-gray-600 font-semibold">Completed:</td>
+                                                        <td className="py-2">{new Date(selectedWorkOrder.completedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-wide mb-3">
+                                            Vehicle Information
+                                        </h3>
+                                        <table className="w-full text-sm">
+                                            <tbody>
+                                                <tr>
+                                                    <td className="py-2 text-gray-600 font-semibold">Plate Number:</td>
+                                                    <td className="py-2 font-bold">{selectedWorkOrder.vehicleId?.plateNumber || '-'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2 text-gray-600 font-semibold">Make/Model:</td>
+                                                    <td className="py-2">{selectedWorkOrder.vehicleId?.manufacturer} {selectedWorkOrder.vehicleId?.model}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2 text-gray-600 font-semibold">Year:</td>
+                                                    <td className="py-2">{selectedWorkOrder.vehicleId?.year || '-'}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-2 text-gray-600 font-semibold">Current KM:</td>
+                                                    <td className="py-2">{selectedWorkOrder.vehicleId?.currentKm?.toLocaleString() || '-'} km</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Description */}
+                                <div className="mb-6">
+                                    <h3 className="text-xs font-black text-gray-500 uppercase tracking-wide mb-3">
+                                        Description
+                                    </h3>
+                                    <p className="text-sm leading-relaxed text-gray-700 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                        {selectedWorkOrder.description}
+                                    </p>
+                                </div>
+
+                                {/* Assigned Mechanics */}
+                                {selectedWorkOrder.assignedMechanics && selectedWorkOrder.assignedMechanics.length > 0 && (
+                                    <div className="mb-6">
+                                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-wide mb-3">
+                                            Assigned Mechanics
+                                        </h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedWorkOrder.assignedMechanics.map((mechanic, idx) => (
+                                                <div key={idx} className="px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm font-semibold text-blue-700">
+                                                    {mechanic.fullName || mechanic.username}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Spare Parts Used */}
+                                {selectedWorkOrder.spareParts?.length > 0 && (
+                                    <div className="mb-6">
+                                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-wide mb-3">
+                                            Spare Parts Used
+                                        </h3>
+                                        <table className="w-full border-collapse text-sm">
                                             <thead>
-                                                <tr className="bg-gray-50">
-                                                    <th className="px-3 py-2 text-left">Part</th>
-                                                    <th className="px-3 py-2 text-right">Qty</th>
-                                                    <th className="px-3 py-2 text-right">Unit Cost</th>
-                                                    <th className="px-3 py-2 text-right">Total</th>
+                                                <tr className="bg-gray-50 border-b-2 border-gray-200">
+                                                    <th className="px-4 py-3 text-left text-xs font-black text-gray-600 uppercase tracking-wide">Part Name</th>
+                                                    <th className="px-4 py-3 text-right text-xs font-black text-gray-600 uppercase tracking-wide">Quantity</th>
+                                                    <th className="px-4 py-3 text-right text-xs font-black text-gray-600 uppercase tracking-wide">Unit Cost</th>
+                                                    <th className="px-4 py-3 text-right text-xs font-black text-gray-600 uppercase tracking-wide">Total Cost</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {selectedWorkOrder.spareParts.map((part, idx) => (
-                                                    <tr key={idx} className="border-b">
-                                                        <td className="px-3 py-2">{part.itemName}</td>
-                                                        <td className="px-3 py-2 text-right">{part.quantity}</td>
-                                                        <td className="px-3 py-2 text-right">ETB {part.unitCost?.toLocaleString()}</td>
-                                                        <td className="px-3 py-2 text-right font-bold">ETB {part.totalCost?.toLocaleString()}</td>
+                                                    <tr key={idx} className="border-b border-gray-200">
+                                                        <td className="px-4 py-3">{part.itemName}</td>
+                                                        <td className="px-4 py-3 text-right">{part.quantity}</td>
+                                                        <td className="px-4 py-3 text-right">ETB {part.unitCost?.toLocaleString()}</td>
+                                                        <td className="px-4 py-3 text-right font-bold">ETB {part.totalCost?.toLocaleString()}</td>
                                                     </tr>
                                                 ))}
+                                                <tr className="bg-gray-50 font-bold">
+                                                    <td colSpan="3" className="px-4 py-3 text-right">Parts Subtotal:</td>
+                                                    <td className="px-4 py-3 text-right text-primary-600">ETB {selectedWorkOrder.totalPartsCost?.toLocaleString() || '0'}</td>
+                                                </tr>
                                             </tbody>
                                         </table>
                                     </div>
                                 )}
 
+                                {/* Labor Costs */}
                                 {selectedWorkOrder.laborCosts?.length > 0 && (
-                                    <div>
-                                        <div className="text-xs font-black text-gray-600 uppercase mb-2">Labor Costs</div>
-                                        <table className="w-full text-sm">
+                                    <div className="mb-6">
+                                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-wide mb-3">
+                                            Labor Costs
+                                        </h3>
+                                        <table className="w-full border-collapse text-sm">
                                             <thead>
-                                                <tr className="bg-gray-50">
-                                                    <th className="px-3 py-2 text-left">Mechanic</th>
-                                                    <th className="px-3 py-2 text-right">Hours</th>
-                                                    <th className="px-3 py-2 text-right">Rate</th>
-                                                    <th className="px-3 py-2 text-right">Total</th>
+                                                <tr className="bg-gray-50 border-b-2 border-gray-200">
+                                                    <th className="px-4 py-3 text-left text-xs font-black text-gray-600 uppercase tracking-wide">Mechanic</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-black text-gray-600 uppercase tracking-wide">Description</th>
+                                                    <th className="px-4 py-3 text-right text-xs font-black text-gray-600 uppercase tracking-wide">Hours</th>
+                                                    <th className="px-4 py-3 text-right text-xs font-black text-gray-600 uppercase tracking-wide">Rate/Hour</th>
+                                                    <th className="px-4 py-3 text-right text-xs font-black text-gray-600 uppercase tracking-wide">Total Cost</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {selectedWorkOrder.laborCosts.map((labor, idx) => (
-                                                    <tr key={idx} className="border-b">
-                                                        <td className="px-3 py-2">{labor.mechanicId?.fullName || labor.mechanicId?.username}</td>
-                                                        <td className="px-3 py-2 text-right">{labor.hours}</td>
-                                                        <td className="px-3 py-2 text-right">ETB {labor.hourlyRate?.toLocaleString()}</td>
-                                                        <td className="px-3 py-2 text-right font-bold">ETB {labor.totalCost?.toLocaleString()}</td>
+                                                    <tr key={idx} className="border-b border-gray-200">
+                                                        <td className="px-4 py-3">{labor.mechanicId?.fullName || labor.mechanicId?.username || '-'}</td>
+                                                        <td className="px-4 py-3 text-xs text-gray-600">{labor.description || '-'}</td>
+                                                        <td className="px-4 py-3 text-right">{labor.hours}</td>
+                                                        <td className="px-4 py-3 text-right">ETB {labor.hourlyRate?.toLocaleString()}</td>
+                                                        <td className="px-4 py-3 text-right font-bold">ETB {labor.totalCost?.toLocaleString()}</td>
                                                     </tr>
                                                 ))}
+                                                <tr className="bg-gray-50 font-bold">
+                                                    <td colSpan="4" className="px-4 py-3 text-right">Labor Subtotal:</td>
+                                                    <td className="px-4 py-3 text-right text-primary-600">ETB {selectedWorkOrder.totalLaborCost?.toLocaleString() || '0'}</td>
+                                                </tr>
                                             </tbody>
                                         </table>
                                     </div>
                                 )}
 
-                                <div className="bg-primary-50 p-4 rounded-lg">
-                                    <div className="grid grid-cols-3 gap-4 text-center">
-                                        <div>
-                                            <div className="text-xs font-black text-gray-600 uppercase">Parts Cost</div>
-                                            <div className="text-lg font-bold text-primary-700">ETB {selectedWorkOrder.totalPartsCost?.toLocaleString() || '0'}</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-xs font-black text-gray-600 uppercase">Labor Cost</div>
-                                            <div className="text-lg font-bold text-primary-700">ETB {selectedWorkOrder.totalLaborCost?.toLocaleString() || '0'}</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-xs font-black text-gray-600 uppercase">Total Cost</div>
-                                            <div className="text-2xl font-black text-primary-900">ETB {selectedWorkOrder.totalCost?.toLocaleString() || '0'}</div>
-                                        </div>
+                                {/* Total Cost Summary */}
+                                <div className="mb-6 p-5 bg-blue-50 border-2 border-primary-600 rounded-xl">
+                                    <div className="flex justify-between mb-3">
+                                        <span className="text-sm font-semibold text-gray-700">Parts Cost:</span>
+                                        <span className="text-sm font-bold text-gray-900">ETB {selectedWorkOrder.totalPartsCost?.toLocaleString() || '0'}</span>
+                                    </div>
+                                    <div className="flex justify-between mb-3">
+                                        <span className="text-sm font-semibold text-gray-700">Labor Cost:</span>
+                                        <span className="text-sm font-bold text-gray-900">ETB {selectedWorkOrder.totalLaborCost?.toLocaleString() || '0'}</span>
+                                    </div>
+                                    <div className="flex justify-between pt-3 mt-3 border-t-2 border-primary-600">
+                                        <span className="text-lg font-black text-gray-900">TOTAL COST:</span>
+                                        <span className="text-2xl font-black text-primary-600">ETB {selectedWorkOrder.totalCost?.toLocaleString() || '0'}</span>
                                     </div>
                                 </div>
 
+                                {/* Progress Timeline */}
                                 {selectedWorkOrder.progressNotes?.length > 0 && (
-                                    <div>
-                                        <div className="text-xs font-black text-gray-600 uppercase mb-2">Progress History</div>
-                                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                                    <div className="mb-6">
+                                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-wide mb-3">
+                                            Progress Timeline
+                                        </h3>
+                                        <div className="relative pl-6">
+                                            {/* Timeline line */}
+                                            <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-gray-300"></div>
+
                                             {selectedWorkOrder.progressNotes.map((note, idx) => (
-                                                <div key={idx} className="bg-gray-50 p-3 rounded-lg">
-                                                    <div className="text-sm">{note.note}</div>
-                                                    <div className="text-xs text-gray-500 mt-1">
-                                                        {note.addedBy?.fullName || note.addedBy?.username} - {new Date(note.addedAt).toLocaleString()}
+                                                <div key={idx} className="relative mb-4 pb-4 border-b border-gray-100 last:border-b-0">
+                                                    {/* Timeline dot */}
+                                                    <div className="absolute -left-4 top-1 w-3 h-3 rounded-full bg-primary-600 border-2 border-white shadow"></div>
+
+                                                    <div className="text-sm leading-relaxed text-gray-700 mb-1">{note.note}</div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {note.addedBy?.fullName || note.addedBy?.username} • {new Date(note.addedAt).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Footer */}
+                                <div className="mt-8 pt-5 border-t-2 border-gray-200 text-center text-xs text-gray-500">
+                                    <p className="mb-1">This is an official work order document generated by FleetPro Management System</p>
+                                    <p>Generated on: {new Date().toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Print Template */}
+            <WorkOrderPrintTemplate workOrder={selectedWorkOrder} />
         </div>
     );
 };

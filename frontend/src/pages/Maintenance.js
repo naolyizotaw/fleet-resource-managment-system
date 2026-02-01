@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { maintenanceAPI, vehiclesAPI, usersAPI } from '../services/api';
-import { Wrench, Plus, Search, Filter, Truck, Edit, Trash2, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { maintenanceAPI, vehiclesAPI, usersAPI, workOrdersAPI } from '../services/api';
+import { Wrench, Plus, Search, Filter, Truck, Edit, Trash2, AlertCircle, CheckCircle, Clock, ClipboardList, ExternalLink } from 'lucide-react';
 
 const Maintenance = () => {
   const { user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [usersMap, setUsersMap] = useState({});
+  const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -29,7 +30,7 @@ const Maintenance = () => {
 
   const [formData, setFormData] = useState({
     vehicleId: '',
-  category: '',
+    category: '',
     description: '',
     priority: 'medium',
     estimatedCost: '',
@@ -41,13 +42,13 @@ const Maintenance = () => {
     try {
       setLoading(true);
       let maintenanceRes;
-      
+
       if (user.role === 'admin' || user.role === 'manager') {
         maintenanceRes = await maintenanceAPI.getAll();
       } else {
         maintenanceRes = await maintenanceAPI.getMyRequests();
       }
-      
+
       // For drivers/users fetch only vehicles assigned to them; admins/managers get all
       const vehiclesRes = (user.role === 'admin' || user.role === 'manager')
         ? await vehiclesAPI.getAll()
@@ -79,6 +80,16 @@ const Maintenance = () => {
       setRequests(maintenanceRes.data || []);
       setVehicles(vehiclesRes.data || []);
       setUsersMap(map);
+
+      // Fetch work orders to check which maintenance requests have been converted
+      if (user.role === 'admin' || user.role === 'manager') {
+        try {
+          const woRes = await workOrdersAPI.getAll();
+          setWorkOrders(woRes.data || []);
+        } catch (e) {
+          console.error('Failed to fetch work orders:', e);
+        }
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       setAlert({ type: 'error', message: 'Failed to fetch data' });
@@ -100,7 +111,7 @@ const Maintenance = () => {
     if (!targetId) return;
     const el = rowRefs.current[targetId];
     if (el) {
-      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch { }
       setHighlightedId(targetId);
       const t = setTimeout(() => setHighlightedId(null), 4500);
       const newParams = new URLSearchParams(location.search);
@@ -118,11 +129,11 @@ const Maintenance = () => {
     // Prefer populated object if available (driver or driverId could be populated)
     const populated = (u && typeof u === 'object') ? u : (fallbackId && typeof fallbackId === 'object' ? fallbackId : null);
     if (populated) {
-      return populated.fullName || populated.username || populated.name || populated.email || (populated._id ? `${String(populated._id).slice(0,6)}…` : '-');
+      return populated.fullName || populated.username || populated.name || populated.email || (populated._id ? `${String(populated._id).slice(0, 6)}…` : '-');
     }
     // If it's a string id, try the usersMap lookup
     const idKey = typeof u === 'string' ? u : (typeof fallbackId === 'string' ? fallbackId : null);
-    if (idKey) return usersMap[idKey] || (idKey.slice ? `${idKey.slice(0,6)}…` : idKey);
+    if (idKey) return usersMap[idKey] || (idKey.slice ? `${idKey.slice(0, 6)}…` : idKey);
     return '-';
   };
 
@@ -137,13 +148,13 @@ const Maintenance = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       // Build payload matching backend model
       const payload = {
         vehicleId: formData.vehicleId,
-  category: formData.category,
-  priority: formData.priority,
+        category: formData.category,
+        priority: formData.priority,
         description: formData.description,
       };
       if (formData.category === 'Service' && formData.serviceKm !== undefined && formData.serviceKm !== '') {
@@ -167,21 +178,21 @@ const Maintenance = () => {
         setTimeout(() => setAlert({ type: '', message: '' }), 5000);
       } else {
         console.log('Creating maintenance payload:', payload);
-  const response = await maintenanceAPI.create(payload);
-  console.log('Create response:', response);
-  // backend returns { message, request }
-  const created = response.data?.request || response.data;
-  setRequests([...requests, created]);
-  setConflictInfo(null);
-  setAlert({ type: 'success', message: 'Maintenance request created successfully' });
-  setTimeout(() => setAlert({ type: '', message: '' }), 5000);
+        const response = await maintenanceAPI.create(payload);
+        console.log('Create response:', response);
+        // backend returns { message, request }
+        const created = response.data?.request || response.data;
+        setRequests([...requests, created]);
+        setConflictInfo(null);
+        setAlert({ type: 'success', message: 'Maintenance request created successfully' });
+        setTimeout(() => setAlert({ type: '', message: '' }), 5000);
       }
-      
+
       setShowModal(false);
       setEditingRequest(null);
       resetForm();
     } catch (error) {
-  console.error('Error saving maintenance request:', error);
+      console.error('Error saving maintenance request:', error);
       const message = error?.response?.data?.message || error?.message || 'Failed to save maintenance request';
       // If conflict (existing open request), surface details and allow opening it
       if (error?.response?.status === 409) {
@@ -220,7 +231,7 @@ const Maintenance = () => {
           const veh = vehRes.data;
           setVehicles(prev => prev.map(v => v._id === veh._id ? veh : v));
           // notify other pages/components (Vehicles page) that a vehicle was updated
-          try { window.dispatchEvent(new CustomEvent('vehicle:updated', { detail: veh })); } catch (e) {}
+          try { window.dispatchEvent(new CustomEvent('vehicle:updated', { detail: veh })); } catch (e) { }
         }
       } catch (e) {
         console.error('Failed to refresh vehicle after status update:', e);
@@ -256,12 +267,12 @@ const Maintenance = () => {
       // If backend returned nextServiceInfo (we handled a Service), refresh that vehicle so Vehicles list updates immediately
       try {
         const nextInfo = res.data?.nextServiceInfo;
-  const vehicleId = updated?.vehicleId?._id || updated?.vehicleId || requestToComplete?.vehicleId;
+        const vehicleId = updated?.vehicleId?._id || updated?.vehicleId || requestToComplete?.vehicleId;
         if (nextInfo && vehicleId) {
           const vehRes = await vehiclesAPI.getById(vehicleId);
           const veh = vehRes.data;
           setVehicles(prev => prev.map(v => v._id === veh._id ? veh : v));
-          try { window.dispatchEvent(new CustomEvent('vehicle:updated', { detail: veh })); } catch (e) {}
+          try { window.dispatchEvent(new CustomEvent('vehicle:updated', { detail: veh })); } catch (e) { }
         }
       } catch (e) {
         console.error('Failed to refresh vehicle after completion:', e);
@@ -295,6 +306,24 @@ const Maintenance = () => {
     } catch (err) {
       console.error('Error deleting request:', err);
       const message = err?.response?.data?.message || err?.message || 'Failed to delete request';
+      setAlert({ type: 'error', message });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
+    }
+  };
+
+  const handleConvertToWorkOrder = async (requestId) => {
+    try {
+      const res = await workOrdersAPI.convertFromMaintenance(requestId);
+      setAlert({ type: 'success', message: `Work order ${res.data.workOrder.workOrderNumber} created successfully` });
+      setTimeout(() => setAlert({ type: '', message: '' }), 5000);
+      // Refresh work orders
+      const woRes = await workOrdersAPI.getAll();
+      setWorkOrders(woRes.data || []);
+      // Navigate to work orders page with highlight
+      navigate(`/work-orders?highlight=${res.data.workOrder._id}`);
+    } catch (err) {
+      console.error('Failed to convert to work order:', err);
+      const message = err?.response?.data?.message || err?.message || 'Failed to create work order';
       setAlert({ type: 'error', message });
       setTimeout(() => setAlert({ type: '', message: '' }), 5000);
     }
@@ -376,9 +405,9 @@ const Maintenance = () => {
   };
 
   const filteredRequests = requests.filter(request => {
-  const vehicle = resolveVehicle(request);
-  const vehicleLabel = `${vehicle?.manufacturer || vehicle?.make || ''} ${vehicle?.model || ''} ${vehicle?.plateNumber || ''}`.toLowerCase();
-    const matchesSearch = 
+    const vehicle = resolveVehicle(request);
+    const vehicleLabel = `${vehicle?.manufacturer || vehicle?.make || ''} ${vehicle?.model || ''} ${vehicle?.plateNumber || ''}`.toLowerCase();
+    const matchesSearch =
       request.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vehicleLabel.includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
@@ -410,7 +439,7 @@ const Maintenance = () => {
           <div className="w-1 h-1 bg-primary-500 rounded-full"></div>
           <span className="text-[9px] uppercase tracking-[0.15em] font-black text-slate-400">Maintenance Management Dashboard</span>
         </div>
-        
+
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight mb-1">
@@ -425,7 +454,7 @@ const Maintenance = () => {
               <span className="text-slate-400 font-semibold">Real-time Analytics</span>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowModal(true)}
@@ -662,6 +691,38 @@ const Maintenance = () => {
                           </button>
                         </div>
                       )}
+
+                      {/* Convert to Work Order button for approved requests */}
+                      {(user.role === 'admin' || user.role === 'manager') && request.status === 'approved' && (() => {
+                        const existingWO = workOrders.find(wo => wo.maintenanceRequestId?._id === request._id || wo.maintenanceRequestId === request._id);
+                        if (existingWO) {
+                          return (
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => navigate(`/work-orders?highlight=${existingWO._id}`)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100"
+                                title="View Work Order"
+                              >
+                                <ClipboardList className="h-3 w-3" />
+                                <span>WO: {existingWO.workOrderNumber}</span>
+                                <ExternalLink className="h-3 w-3" />
+                              </button>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleConvertToWorkOrder(request._id)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-purple-200 bg-purple-50 text-purple-700 text-xs font-medium hover:bg-purple-100"
+                              title="Convert to Work Order"
+                            >
+                              <ClipboardList className="h-3 w-3" />
+                              <span>Create Work Order</span>
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -680,7 +741,7 @@ const Maintenance = () => {
             </div>
             <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-2">No maintenance requests found</h3>
             <p className="text-sm text-gray-500 font-medium">
-              {searchTerm || statusFilter !== 'all' 
+              {searchTerm || statusFilter !== 'all'
                 ? 'Try adjusting your search or filter criteria.'
                 : 'Get started by creating a new maintenance request.'
               }
@@ -694,7 +755,7 @@ const Maintenance = () => {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => { setShowModal(false); setEditingRequest(null); resetForm(); }} />
-            
+
             <div className="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border border-gray-200">
               {/* Modal Header */}
               <div className="relative bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-5">
@@ -748,7 +809,7 @@ const Maintenance = () => {
                       <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Category *</label>
                       <select
                         value={formData.category}
-                        onChange={(e) => setFormData({...formData, category: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                         className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
                         required
                       >
@@ -763,12 +824,12 @@ const Maintenance = () => {
                         <option value="Other">Other</option>
                       </select>
                     </div>
-                    
+
                     <div>
                       <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Vehicle *</label>
                       <select
                         value={formData.vehicleId}
-                        onChange={(e) => setFormData({...formData, vehicleId: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, vehicleId: e.target.value })}
                         className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
                         required
                       >
@@ -788,32 +849,32 @@ const Maintenance = () => {
                       <input
                         type="number"
                         value={formData.serviceKm || ''}
-                        onChange={(e) => setFormData({...formData, serviceKm: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, serviceKm: e.target.value })}
                         className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
                         placeholder="Leave blank to use vehicle current KM"
                         min="0"
                       />
                     </div>
                   )}
-                  
+
                   <div>
                     <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Description *</label>
                     <textarea
                       value={formData.description}
-                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all resize-none"
                       rows="4"
                       required
                       placeholder="Describe the maintenance issue in detail..."
                     />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-5">
                     <div>
                       <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Priority</label>
                       <select
                         value={formData.priority}
-                        onChange={(e) => setFormData({...formData, priority: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                         className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
                       >
                         <option value="low">Low</option>
@@ -826,7 +887,7 @@ const Maintenance = () => {
                       <input
                         type="number"
                         value={formData.estimatedCost}
-                        onChange={(e) => setFormData({...formData, estimatedCost: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, estimatedCost: e.target.value })}
                         className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
                         placeholder="0.00"
                         min="0"
@@ -834,12 +895,12 @@ const Maintenance = () => {
                       />
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Additional Notes</label>
                     <textarea
                       value={formData.notes}
-                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:border-primary-500 focus:bg-white transition-all resize-none"
                       rows="3"
                       placeholder="Any additional information or special instructions..."
@@ -847,7 +908,7 @@ const Maintenance = () => {
                   </div>
                 </form>
               </div>
-              
+
               <div className="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-gray-200">
                 <button
                   type="button"
@@ -959,7 +1020,7 @@ const Maintenance = () => {
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowDetailModal(false)} />
-            
+
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="flex justify-between items-start mb-4">

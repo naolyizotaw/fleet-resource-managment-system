@@ -19,6 +19,7 @@ import Settings from './pages/Settings';
 import Map from './pages/Map';
 import Inventory from './pages/Inventory';
 import SpareParts from './pages/SpareParts';
+import WorkOrders from './pages/WorkOrders';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -60,6 +61,13 @@ function AppRoutes() {
         } />
 
         <Route path="/maintenance" element={<Maintenance />} />
+
+        <Route path="/work-orders" element={
+          <ProtectedRoute allowedRoles={['admin', 'manager']}>
+            <WorkOrders />
+          </ProtectedRoute>
+        } />
+
         <Route path="/fuel" element={<Fuel />} />
         <Route path="/perdiem" element={<PerDiem />} />
         <Route path="/logs" element={<Logs />} />
@@ -75,7 +83,7 @@ function AppRoutes() {
             <Inventory />
           </ProtectedRoute>
         } />
-        
+
         <Route path="/spare-parts" element={<SpareParts />} />
 
         <Route path="/news" element={<News />} />

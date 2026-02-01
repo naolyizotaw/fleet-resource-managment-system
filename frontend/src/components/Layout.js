@@ -21,6 +21,7 @@ import {
   Newspaper,
   MapPin,
   Package,
+  ClipboardList,
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -285,6 +286,7 @@ const Layout = ({ children }) => {
     { name: 'Vehicles', href: '/vehicles', icon: Truck, roles: ['admin', 'manager'] },
     { name: 'Map', href: '/map', icon: MapPin, roles: ['admin', 'manager'] },
     { name: 'Maintenance', href: '/maintenance', icon: Wrench, roles: ['admin', 'manager', 'user'] },
+    { name: 'Work Orders', href: '/work-orders', icon: ClipboardList, roles: ['admin', 'manager'] },
     { name: 'Fuel', href: '/fuel', icon: Fuel, roles: ['admin', 'manager', 'user'] },
     { name: 'Per Diem', href: '/perdiem', icon: Receipt, roles: ['admin', 'manager', 'user'] },
     { name: 'Logs', href: '/logs', icon: FileText, roles: ['admin', 'manager', 'user'] },
@@ -382,7 +384,7 @@ const Layout = ({ children }) => {
             <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Management</span>
           </div>
           <div className="space-y-1.5">
-            {filteredNavigation.filter(i => ['Users', 'Vehicles', 'Map', 'Maintenance', 'Fuel', 'Per Diem', 'Logs', 'Inventory', 'Spare Parts Requests'].includes(i.name)).map(item => {
+            {filteredNavigation.filter(i => ['Users', 'Vehicles', 'Map', 'Maintenance', 'Work Orders', 'Fuel', 'Per Diem', 'Logs', 'Inventory', 'Spare Parts Requests'].includes(i.name)).map(item => {
               const isActive = location.pathname === item.href;
               return (
                 <Link
