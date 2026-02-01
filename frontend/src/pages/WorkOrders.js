@@ -903,6 +903,7 @@ const WorkOrders = () => {
                                             <thead>
                                                 <tr className="bg-gray-50 border-b-2 border-gray-200">
                                                     <th className="px-4 py-3 text-left text-xs font-black text-gray-600 uppercase tracking-wide">Part Name</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-black text-gray-600 uppercase tracking-wide">Status</th>
                                                     <th className="px-4 py-3 text-right text-xs font-black text-gray-600 uppercase tracking-wide">Quantity</th>
                                                     <th className="px-4 py-3 text-right text-xs font-black text-gray-600 uppercase tracking-wide">Unit Cost</th>
                                                     <th className="px-4 py-3 text-right text-xs font-black text-gray-600 uppercase tracking-wide">Total Cost</th>
@@ -912,13 +913,21 @@ const WorkOrders = () => {
                                                 {selectedWorkOrder.spareParts.map((part, idx) => (
                                                     <tr key={idx} className="border-b border-gray-200">
                                                         <td className="px-4 py-3">{part.itemName}</td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full ${part.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                                    part.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                                                        'bg-yellow-100 text-yellow-800'
+                                                                }`}>
+                                                                {part.status || 'pending'}
+                                                            </span>
+                                                        </td>
                                                         <td className="px-4 py-3 text-right">{part.quantity}</td>
                                                         <td className="px-4 py-3 text-right">ETB {part.unitCost?.toLocaleString()}</td>
                                                         <td className="px-4 py-3 text-right font-bold">ETB {part.totalCost?.toLocaleString()}</td>
                                                     </tr>
                                                 ))}
                                                 <tr className="bg-gray-50 font-bold">
-                                                    <td colSpan="3" className="px-4 py-3 text-right">Parts Subtotal:</td>
+                                                    <td colSpan="4" className="px-4 py-3 text-right">Parts Subtotal:</td>
                                                     <td className="px-4 py-3 text-right text-primary-600">ETB {selectedWorkOrder.totalPartsCost?.toLocaleString() || '0'}</td>
                                                 </tr>
                                             </tbody>

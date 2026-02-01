@@ -12,6 +12,10 @@ const sparePartRequestSchema = new mongoose.Schema(
       ref: "Vehicle",
       required: [true, "Vehicle information is required"],
     },
+    workOrderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "WorkOrder", // Optional: link to a work order if applicable
+    },
     requesterId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

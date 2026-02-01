@@ -378,6 +378,7 @@ const SpareParts = () => {
                             <tr>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Item Code</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Item Name</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Work Order ID</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Vehicle Model</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Plate Number</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Requested By</th>
@@ -408,6 +409,9 @@ const SpareParts = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-bold text-gray-900">{req.itemId?.itemName}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-bold text-gray-900">{req.workOrderId?.workOrderNumber || '-'}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-bold text-gray-900">{req.vehicleId?.make} {req.vehicleId?.model}</div>
@@ -745,6 +749,10 @@ const SpareParts = () => {
                                         <div className="flex justify-between">
                                             <span className="text-sm text-gray-600">Request ID:</span>
                                             <span className="text-sm font-bold text-gray-900">{printRequest._id?.slice(-8).toUpperCase()}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-sm text-gray-600">Work Order ID:</span>
+                                            <span className="text-sm font-bold text-gray-900">{printRequest.workOrderId?.workOrderNumber || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-sm text-gray-600">Request Date:</span>

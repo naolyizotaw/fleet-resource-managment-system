@@ -50,6 +50,7 @@ const getAllRequests = async (req, res) => {
       .populate("vehicleId", "plateNumber make model year")
       .populate("requesterId", "username fullName email role")
       .populate("approvedBy", "username fullName role")
+      .populate("workOrderId", "workOrderNumber")
       .sort({ createdAt: -1 });
 
     res.status(200).json(requests);
@@ -69,6 +70,7 @@ const getMyRequests = async (req, res) => {
       .populate("vehicleId", "plateNumber make model year")
       .populate("requesterId", "username fullName email role")
       .populate("approvedBy", "username fullName role")
+      .populate("workOrderId", "workOrderNumber")
       .sort({ createdAt: -1 });
 
     res.status(200).json(requests);
@@ -119,8 +121,56 @@ const updateRequestStatus = async (req, res) => {
       }
 
       // Deduct stock
+      const previousStock = item.currentStock;
       item.currentStock -= request.quantity;
+
+      // Stock history
+      item.stockHistory.push({
+        type: 'usage',
+        quantity: -request.quantity,
+        previousStock: previousStock,
+        newStock: item.currentStock,
+        reason: request.reason || 'Spare part request approved',
+        vehicleId: request.vehicleId,
+        performedBy: req.user.id
+      });
+
       await item.save();
+
+      // Update Work Order if linked
+      if (request.workOrderId) {
+        const workOrder = await require('../models/workOrderModel').findById(request.workOrderId);
+        if (workOrder) {
+          const partIndex = workOrder.spareParts.findIndex(
+            p => p.itemId.toString() === request.itemId.toString() && p.status === 'pending'
+          );
+          if (partIndex !== -1) {
+            workOrder.spareParts[partIndex].status = 'approved';
+            workOrder.calculateTotalCosts(); // Recalculate costs
+            await workOrder.save();
+          }
+        }
+      }
+    } else if (status === "rejected") {
+      // Update Work Order if linked
+      if (request.workOrderId) {
+        const workOrder = await require('../models/workOrderModel').findById(request.workOrderId);
+        if (workOrder) {
+          const partIndex = workOrder.spareParts.findIndex(
+            p => p.itemId.toString() === request.itemId.toString() && p.status === 'pending'
+          );
+          if (partIndex !== -1) {
+            workOrder.spareParts[partIndex].status = 'rejected';
+            // Don't calculate cost for rejected parts (handled in model reduce?)
+            // Model reduction logic uses totalCost field on the part, but if status is rejected we might want to exclude it?
+            // For now, let's assume we just mark it rejected. Ideally cost calculation should filter by approved
+            // Let's force totalCost to 0 for rejected
+            workOrder.spareParts[partIndex].totalCost = 0;
+            workOrder.calculateTotalCosts();
+            await workOrder.save();
+          }
+        }
+      }
     }
 
     // Update Request

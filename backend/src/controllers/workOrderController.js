@@ -1,5 +1,6 @@
 const WorkOrder = require('../models/workOrderModel');
 const MaintenanceRequest = require('../models/maintenanceRequest');
+const SparePartRequest = require('../models/sparePartRequest');
 const Vehicle = require('../models/vehicleModel');
 const Inventory = require('../models/inventoryModel');
 const User = require('../models/userModel');
@@ -317,33 +318,26 @@ const addSpareParts = async (req, res) => {
                 return res.status(404).json({ message: `Inventory item not found: ${itemId}` });
             }
 
-            // Check stock availability
-            if (inventoryItem.currentStock < quantity) {
-                return res.status(400).json({
-                    message: `Insufficient stock for ${inventoryItem.itemName}. Available: ${inventoryItem.currentStock}, Requested: ${quantity}`
-                });
-            }
+            // // Check stock availability
+            // if (inventoryItem.currentStock < quantity) {
+            //     return res.status(400).json({
+            //         message: `Insufficient stock for ${inventoryItem.itemName}. Available: ${inventoryItem.currentStock}, Requested: ${quantity}`
+            //     });
+            // }
 
-            // Record previous stock before deduction
-            const previousStock = inventoryItem.currentStock;
-
-            // Deduct from inventory
-            inventoryItem.currentStock -= quantity;
-
-            // Add to stock history (using correct field name and format)
-            inventoryItem.stockHistory.push({
-                type: 'usage',
-                quantity: -quantity,
-                previousStock: previousStock,
-                newStock: inventoryItem.currentStock,
-                reason: `Used in work order ${workOrder.workOrderNumber}`,
+            // Create Pending Spare Part Request
+            const sparePartRequest = new SparePartRequest({
+                itemId,
                 vehicleId: workOrder.vehicleId,
-                performedBy: req.user.id,
+                requesterId: req.user.id,
+                quantity,
+                reason: 'Work Order Fulfillment',
+                workOrderId: workOrder._id,
+                status: 'pending'
             });
+            await sparePartRequest.save();
 
-            await inventoryItem.save();
-
-            // Add to work order
+            // Add to work order (Status Pending)
             const unitCost = inventoryItem.unitPrice || 0;
             const totalCost = unitCost * quantity;
 
@@ -354,6 +348,7 @@ const addSpareParts = async (req, res) => {
                 unitCost,
                 totalCost,
                 addedBy: req.user.id,
+                status: 'pending'
             });
 
             addedParts.push({

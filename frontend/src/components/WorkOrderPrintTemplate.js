@@ -320,6 +320,17 @@ const WorkOrderPrintTemplate = ({ workOrder }) => {
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.5px'
                                     }}>
+                                        Status
+                                    </th>
+                                    <th style={{
+                                        padding: '10px 12px',
+                                        textAlign: 'right',
+                                        fontWeight: 'bold',
+                                        color: '#374151',
+                                        fontSize: '11px',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px'
+                                    }}>
                                         Quantity
                                     </th>
                                     <th style={{
@@ -350,6 +361,19 @@ const WorkOrderPrintTemplate = ({ workOrder }) => {
                                 {workOrder.spareParts.map((part, idx) => (
                                     <tr key={idx} style={{ borderBottom: '1px solid #e5e7eb' }}>
                                         <td style={{ padding: '10px 12px' }}>{part.itemName}</td>
+                                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                                            <span style={{
+                                                padding: '2px 6px',
+                                                borderRadius: '9999px',
+                                                fontSize: '10px',
+                                                fontWeight: 'bold',
+                                                backgroundColor: part.status === 'approved' ? '#dcfce7' : part.status === 'rejected' ? '#fee2e2' : '#fef9c3',
+                                                color: part.status === 'approved' ? '#166534' : part.status === 'rejected' ? '#991b1b' : '#854d0e',
+                                                textTransform: 'uppercase'
+                                            }}>
+                                                {part.status || 'pending'}
+                                            </span>
+                                        </td>
                                         <td style={{ padding: '10px 12px', textAlign: 'right' }}>{part.quantity}</td>
                                         <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                                             ETB {part.unitCost?.toLocaleString()}
@@ -360,7 +384,7 @@ const WorkOrderPrintTemplate = ({ workOrder }) => {
                                     </tr>
                                 ))}
                                 <tr style={{ backgroundColor: '#f9fafb', fontWeight: 'bold' }}>
-                                    <td colSpan="3" style={{ padding: '12px', textAlign: 'right' }}>
+                                    <td colSpan="4" style={{ padding: '12px', textAlign: 'right' }}>
                                         Parts Subtotal:
                                     </td>
                                     <td style={{ padding: '12px', textAlign: 'right', color: '#000' }}>

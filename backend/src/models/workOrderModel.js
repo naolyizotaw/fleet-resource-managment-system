@@ -34,6 +34,11 @@ const sparePartUsedSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    status: {
+        type: String,
+        enum: ["pending", "approved", "rejected"],
+        default: "pending",
+    },
 });
 
 const laborCostSchema = new mongoose.Schema({
