@@ -36,6 +36,13 @@ const sparePartRequestSchema = new mongoose.Schema(
       type: String, // Reason for rejection or approval notes
       trim: true,
     },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    approvedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,

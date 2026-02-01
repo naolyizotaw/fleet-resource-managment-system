@@ -367,16 +367,19 @@ const SpareParts = () => {
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Vehicle Model</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Plate Number</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Requested By</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Date Requested</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Quantity</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Reason</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Approved By</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Date Approved</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {filteredRequests.length === 0 ? (
                                 <tr>
-                                    <td colSpan="9" className="px-6 py-12 text-center">
+                                    <td colSpan="12" className="px-6 py-12 text-center">
                                         <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                                         <p className="text-gray-500 font-semibold">No requests found</p>
                                     </td>
@@ -401,6 +404,9 @@ const SpareParts = () => {
                                             <div className="text-xs text-gray-500">{req.requesterId?.role}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-bold text-gray-900">{new Date(req.createdAt).toLocaleDateString()}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
                                             <span className="text-sm font-bold text-gray-900">{req.quantity} {req.itemId?.unit}</span>
                                         </td>
                                          <td className="px-6 py-4">
@@ -415,6 +421,12 @@ const SpareParts = () => {
                                              <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${getStatusColor(req.status)}`}>
                                                 {req.status?.charAt(0).toUpperCase() + req.status?.slice(1)}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-bold text-gray-900">{req.approvedBy?.fullName || '-'}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-bold text-gray-900">{req.approvedAt ? new Date(req.approvedAt).toLocaleDateString() : '-'}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div className="flex items-center gap-2">

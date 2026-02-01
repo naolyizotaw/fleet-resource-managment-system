@@ -49,6 +49,7 @@ const getAllRequests = async (req, res) => {
       .populate("itemId", "itemName itemCode currentStock unit")
       .populate("vehicleId", "plateNumber make model")
       .populate("requesterId", "username fullName email role")
+      .populate("approvedBy", "username fullName role")
       .sort({ createdAt: -1 });
 
     res.status(200).json(requests);
@@ -67,6 +68,7 @@ const getMyRequests = async (req, res) => {
       .populate("itemId", "itemName itemCode unit")
       .populate("vehicleId", "plateNumber make model")
       .populate("requesterId", "username fullName email role")
+      .populate("approvedBy", "username fullName role")
       .sort({ createdAt: -1 });
 
     res.status(200).json(requests);
@@ -124,6 +126,10 @@ const updateRequestStatus = async (req, res) => {
     // Update Request
     request.status = status;
     request.adminComment = adminComment || "";
+    if (status === "approved") {
+      request.approvedBy = req.user.id;
+      request.approvedAt = new Date();
+    }
     await request.save();
 
     res.status(200).json({
