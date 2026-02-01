@@ -139,4 +139,17 @@ export const sparePartsAPI = {
   delete: (id) => api.delete(`/api/spare-parts/${id}`),
 };
 
+// Work Orders API
+export const workOrdersAPI = {
+  convertFromMaintenance: (maintenanceId) => api.post(`/api/work-orders/convert/${maintenanceId}`),
+  getAll: (params) => api.get('/api/work-orders', { params }),
+  getById: (id) => api.get(`/api/work-orders/${id}`),
+  assignMechanic: (id, data) => api.patch(`/api/work-orders/${id}/assign`, data),
+  addSpareParts: (id, data) => api.patch(`/api/work-orders/${id}/parts`, data),
+  addLaborCost: (id, data) => api.patch(`/api/work-orders/${id}/labor`, data),
+  updateProgress: (id, data) => api.patch(`/api/work-orders/${id}/progress`, data),
+  complete: (id, data) => api.patch(`/api/work-orders/${id}/complete`, data),
+  delete: (id) => api.delete(`/api/work-orders/${id}`),
+};
+
 export default api;

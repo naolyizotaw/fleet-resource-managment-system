@@ -14,6 +14,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const newsRoutes = require('./routes/newsRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const sparePartRequestRoutes = require('./routes/sparePartRequestRoutes');
+const workOrderRoutes = require('./routes/workOrderRoutes');
 
 
 const app = express();
@@ -37,6 +38,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/spare-parts', sparePartRequestRoutes);
+app.use('/api/work-orders', workOrderRoutes);
 
 
 //start server 
