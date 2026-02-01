@@ -215,8 +215,30 @@ const deleteRequest = async (req, res) => {
       return res.status(400).json({ message: "Cannot delete a processed request" });
     }
 
+    // Remove from Work Order if linked
+    if (request.workOrderId) {
+      const workOrder = await require('../models/workOrderModel').findById(request.workOrderId);
+      if (workOrder) {
+        // Filter out the specific part
+        // We need to match itemId and status 'pending' to be safe.
+        // Ideally should match by requestId if we stored it in workOrder, but we didn't. 
+        // Matching by itemId and 'pending' is safe enough because multiple pending requests for same item 
+        // would just mean multiple entries, and we ideally remove one.
+        // Let's find the index of the first matching pending part and remove it.
+
+        const partIndex = workOrder.spareParts.findIndex(
+          p => p.itemId.toString() === request.itemId.toString() && p.status === 'pending'
+        );
+
+        if (partIndex !== -1) {
+          workOrder.spareParts.splice(partIndex, 1);
+          workOrder.calculateTotalCosts();
+          await workOrder.save();
+        }
+      }
+    }
+
     await SparePartRequest.findByIdAndDelete(id);
-    // OR request.deleteOne(); depending on mongoose version, findByIdAndDelete is safer usually.
 
     res.status(200).json({ message: "Request deleted successfully" });
 

@@ -126,7 +126,9 @@ const Inventory = () => {
             };
 
             if (editingItem) {
-                await inventoryAPI.update(editingItem._id, payload);
+                const updatePayload = { ...payload };
+                delete updatePayload.currentStock;
+                await inventoryAPI.update(editingItem._id, updatePayload);
                 showAlert('success', 'Item updated successfully');
             } else {
                 await inventoryAPI.create(payload);
