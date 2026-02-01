@@ -412,14 +412,15 @@ const WorkOrders = () => {
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Created By</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Completed Date</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Mechanics</th>
-                                <th className="px-6 py-4 text-right text-xs font-black text-gray-700 uppercase tracking-wider">Total Cost</th>
+                                <th className="px-6 py-4 text-right text-xs font-black text-gray-700 uppercase tracking-wider">Parts Cost</th>
+                                <th className="px-6 py-4 text-right text-xs font-black text-gray-700 uppercase tracking-wider">Labor Cost</th>
                                 <th className="px-6 py-4 text-left text-xs font-black text-gray-700 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {filteredWorkOrders.length === 0 ? (
                                 <tr>
-                                    <td colSpan="11" className="px-6 py-12 text-center">
+                                    <td colSpan="12" className="px-6 py-12 text-center">
                                         <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                                         <p className="text-gray-500 font-semibold">No work orders found</p>
                                     </td>
@@ -480,8 +481,10 @@ const WorkOrders = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right">
-                                            <div className="text-sm font-black text-blue-600">ETB {wo.totalCost?.toLocaleString() || '0'}</div>
-                                            <div className="text-xs text-gray-500">P: {wo.totalPartsCost?.toLocaleString() || '0'} | L: {wo.totalLaborCost?.toLocaleString() || '0'}</div>
+                                            <div className="text-sm font-black text-gray-900">ETB {wo.totalPartsCost?.toLocaleString() || '0'}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            <div className="text-sm font-black text-gray-900">ETB {wo.totalLaborCost?.toLocaleString() || '0'}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div className="flex items-center gap-2">
@@ -612,11 +615,13 @@ const WorkOrders = () => {
                                                 newParts[idx].itemId = e.target.value;
                                                 setPartsToAdd(newParts);
                                             }}
-                                            className="flex-1 px-4 py-2 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm"
+                                            className="flex-1 px-4 py-2 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm font-semibold"
                                         >
                                             <option value="">Select Part...</option>
                                             {inventoryItems.map(item => (
-                                                <option key={item._id} value={item._id}>{item.name} (Stock: {item.currentStock})</option>
+                                                <option key={item._id} value={item._id}>
+                                                    {item.itemName || item.name} - Stock: {item.currentStock} {item.unit || 'units'}
+                                                </option>
                                             ))}
                                         </select>
                                         <input

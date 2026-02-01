@@ -320,21 +320,25 @@ const addSpareParts = async (req, res) => {
             // Check stock availability
             if (inventoryItem.currentStock < quantity) {
                 return res.status(400).json({
-                    message: `Insufficient stock for ${inventoryItem.name}. Available: ${inventoryItem.currentStock}, Requested: ${quantity}`
+                    message: `Insufficient stock for ${inventoryItem.itemName}. Available: ${inventoryItem.currentStock}, Requested: ${quantity}`
                 });
             }
+
+            // Record previous stock before deduction
+            const previousStock = inventoryItem.currentStock;
 
             // Deduct from inventory
             inventoryItem.currentStock -= quantity;
 
-            // Add to history
-            inventoryItem.history.push({
-                action: 'deduction',
+            // Add to stock history (using correct field name and format)
+            inventoryItem.stockHistory.push({
+                type: 'usage',
                 quantity: -quantity,
-                performedBy: req.user.id,
+                previousStock: previousStock,
+                newStock: inventoryItem.currentStock,
                 reason: `Used in work order ${workOrder.workOrderNumber}`,
-                referenceType: 'WorkOrder',
-                referenceId: workOrder._id,
+                vehicleId: workOrder.vehicleId,
+                performedBy: req.user.id,
             });
 
             await inventoryItem.save();
@@ -345,7 +349,7 @@ const addSpareParts = async (req, res) => {
 
             workOrder.spareParts.push({
                 itemId: inventoryItem._id,
-                itemName: inventoryItem.name,
+                itemName: inventoryItem.itemName,
                 quantity,
                 unitCost,
                 totalCost,
@@ -353,7 +357,7 @@ const addSpareParts = async (req, res) => {
             });
 
             addedParts.push({
-                name: inventoryItem.name,
+                name: inventoryItem.itemName,
                 quantity,
                 totalCost,
             });

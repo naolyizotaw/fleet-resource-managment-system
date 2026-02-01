@@ -45,13 +45,13 @@ const WorkOrderPrintTemplate = ({ workOrder }) => {
             left: 0;
             top: 0;
             width: 100%;
-            padding: 20mm;
+            padding: 15px; /* Reduced from 20mm */
             background: white;
           }
           
           @page {
             size: A4;
-            margin: 15mm;
+            margin: 5mm; /* Reduced from 10mm */
           }
           
           .page-break {
@@ -98,25 +98,6 @@ const WorkOrderPrintTemplate = ({ workOrder }) => {
                                 Fleet Resource Management System
                             </p>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                            <div style={{
-                                fontSize: '14px',
-                                color: '#6b7280',
-                                marginBottom: '4px',
-                                fontWeight: '600',
-                                textTransform: 'uppercase',
-                                letterSpacing: '1px'
-                            }}>
-                                Work Order
-                            </div>
-                            <div style={{
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                color: '#2563eb'
-                            }}>
-                                {workOrder.workOrderNumber}
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -141,6 +122,12 @@ const WorkOrderPrintTemplate = ({ workOrder }) => {
                         <table style={{ width: '100%', fontSize: '13px' }}>
                             <tbody>
                                 <tr>
+                                    <td style={{ padding: '6px 0', color: '#6b7280', fontWeight: '600' }}>Work Order #:</td>
+                                    <td style={{ padding: '6px 0', fontWeight: 'bold', color: '#1f2937' }}>
+                                        {workOrder.workOrderNumber}
+                                    </td>
+                                </tr>
+                                <tr>
                                     <td style={{ padding: '6px 0', color: '#6b7280', fontWeight: '600' }}>Status:</td>
                                     <td style={{ padding: '6px 0', fontWeight: 'bold', textTransform: 'capitalize' }}>
                                         {workOrder.status?.replace('_', ' ')}
@@ -157,8 +144,24 @@ const WorkOrderPrintTemplate = ({ workOrder }) => {
                                     <td style={{ padding: '6px 0' }}>{workOrder.category || '-'}</td>
                                 </tr>
                                 <tr>
+                                    <td style={{ padding: '6px 0', color: '#6b7280', fontWeight: '600' }}>Date Requested:</td>
+                                    <td style={{ padding: '6px 0' }}>
+                                        {formatDate(workOrder.maintenanceRequestId?.requestedDate) || '-'}
+                                    </td>
+                                </tr>
+                                <tr>
                                     <td style={{ padding: '6px 0', color: '#6b7280', fontWeight: '600' }}>Created:</td>
                                     <td style={{ padding: '6px 0' }}>{formatDate(workOrder.createdAt)}</td>
+                                </tr>
+                                <tr>
+                                    <td style={{ padding: '6px 0', color: '#6b7280', fontWeight: '600' }}>Created By:</td>
+                                    <td style={{ padding: '6px 0' }}>
+                                        {workOrder.createdBy?.fullName || workOrder.createdBy?.username || '-'}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style={{ padding: '6px 0', color: '#6b7280', fontWeight: '600' }}>Last Updated:</td>
+                                    <td style={{ padding: '6px 0' }}>{formatDate(workOrder.updatedAt)}</td>
                                 </tr>
                                 {workOrder.startedDate && (
                                     <tr>
@@ -360,7 +363,7 @@ const WorkOrderPrintTemplate = ({ workOrder }) => {
                                     <td colSpan="3" style={{ padding: '12px', textAlign: 'right' }}>
                                         Parts Subtotal:
                                     </td>
-                                    <td style={{ padding: '12px', textAlign: 'right', color: '#2563eb' }}>
+                                    <td style={{ padding: '12px', textAlign: 'right', color: '#000' }}>
                                         ETB {workOrder.totalPartsCost?.toLocaleString() || '0'}
                                     </td>
                                 </tr>
@@ -468,7 +471,7 @@ const WorkOrderPrintTemplate = ({ workOrder }) => {
                                     <td colSpan="4" style={{ padding: '12px', textAlign: 'right' }}>
                                         Labor Subtotal:
                                     </td>
-                                    <td style={{ padding: '12px', textAlign: 'right', color: '#2563eb' }}>
+                                    <td style={{ padding: '12px', textAlign: 'right', color: '#000' }}>
                                         ETB {workOrder.totalLaborCost?.toLocaleString() || '0'}
                                     </td>
                                 </tr>
@@ -481,39 +484,44 @@ const WorkOrderPrintTemplate = ({ workOrder }) => {
                 <div className="no-break" style={{
                     marginBottom: '30px',
                     padding: '20px',
-                    backgroundColor: '#eff6ff',
-                    border: '2px solid #2563eb',
-                    borderRadius: '8px'
+                    // backgroundColor: '#eff6ff', 
+                    // border: '2px solid #2563eb', // Removed blue border and background
+                    borderTop: '2px solid #000', // Added simple top border instead? Or maybe just keep it clean
+                    marginTop: '20px'
                 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
-                            Parts Cost:
-                        </span>
-                        <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937' }}>
-                            ETB {workOrder.totalPartsCost?.toLocaleString() || '0'}
-                        </span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
-                            Labor Cost:
-                        </span>
-                        <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1f2937' }}>
-                            ETB {workOrder.totalLaborCost?.toLocaleString() || '0'}
-                        </span>
-                    </div>
-                    <div style={{
-                        borderTop: '2px solid #2563eb',
-                        paddingTop: '12px',
-                        marginTop: '12px',
-                        display: 'flex',
-                        justifyContent: 'space-between'
-                    }}>
-                        <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#1f2937' }}>
-                            TOTAL COST:
-                        </span>
-                        <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#2563eb' }}>
-                            ETB {workOrder.totalCost?.toLocaleString() || '0'}
-                        </span>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <div style={{ width: '300px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#000' }}>
+                                    Parts Cost:
+                                </span>
+                                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#000' }}>
+                                    ETB {workOrder.totalPartsCost?.toLocaleString() || '0'}
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#000' }}>
+                                    Labor Cost:
+                                </span>
+                                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#000' }}>
+                                    ETB {workOrder.totalLaborCost?.toLocaleString() || '0'}
+                                </span>
+                            </div>
+                            <div style={{
+                                borderTop: '2px solid #000',
+                                paddingTop: '12px',
+                                marginTop: '12px',
+                                display: 'flex',
+                                justifyContent: 'space-between'
+                            }}>
+                                <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#000' }}>
+                                    TOTAL COST:
+                                </span>
+                                <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#000' }}>
+                                    ETB {workOrder.totalCost?.toLocaleString() || '0'}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
