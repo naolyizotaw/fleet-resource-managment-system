@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { api } from '../services/api';
+import ChatWidget from './ChatWidget';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useChat } from '../contexts/ChatContext';
 import {
   Home,
   Users,
@@ -22,10 +24,12 @@ import {
   MapPin,
   Package,
   ClipboardList,
+  MessageSquare,
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
+  const { unreadCount: unreadChatCount } = useChat(); // Get unread count from ChatContext
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -292,6 +296,7 @@ const Layout = ({ children }) => {
     { name: 'Logs', href: '/logs', icon: FileText, roles: ['admin', 'manager', 'user'] },
     { name: 'Inventory', href: '/inventory', icon: Package, roles: ['admin', 'manager', 'user'] },
     { name: 'Spare Parts Requests', href: '/spare-parts', icon: Package, roles: ['admin', 'manager', 'user'] },
+    { name: 'Chat', href: '/chat', icon: MessageSquare, roles: ['admin', 'manager', 'user'] },
     { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['admin', 'manager'] },
     { name: 'Settings', href: '/settings', icon: User, roles: ['admin', 'manager', 'user'] },
   ];
@@ -354,7 +359,7 @@ const Layout = ({ children }) => {
             <span className="text-[10px] text-gray-400 uppercase tracking-widest font-black">Main</span>
           </div>
           <div className="space-y-1.5">
-            {filteredNavigation.filter(i => ['Dashboard', 'News', 'Reports'].includes(i.name)).map(item => {
+            {filteredNavigation.filter(i => ['Dashboard', 'Chat', 'News', 'Reports'].includes(i.name)).map(item => {
               const isActive = location.pathname === item.href;
               return (
                 <Link
@@ -369,7 +374,14 @@ const Layout = ({ children }) => {
                   {isActive && !collapsed && (
                     <div className="absolute left-0 w-1 h-8 bg-white rounded-r-full"></div>
                   )}
-                  <item.icon className={`h-5 w-5 ${isActive ? 'scale-110' : 'group-hover:scale-110'} transition-transform`} />
+                  <div className="relative">
+                    <item.icon className={`h-5 w-5 ${isActive ? 'scale-110' : 'group-hover:scale-110'} transition-transform`} />
+                    {item.name === 'Chat' && unreadChatCount > 0 && (
+                      <span className="absolute -top-2 -right-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-black shadow-md border-2 border-gray-800">
+                        {unreadChatCount > 99 ? '99+' : unreadChatCount}
+                      </span>
+                    )}
+                  </div>
                   <span className={`${collapsed ? 'hidden' : 'font-bold text-sm'}`}>{item.name}</span>
                   {isActive && !collapsed && (
                     <div className="ml-auto w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
@@ -730,6 +742,9 @@ const Layout = ({ children }) => {
           {children}
         </main>
       </div>
+
+      {/* Global Chat Widget */}
+      <ChatWidget />
     </div>
   );
 };

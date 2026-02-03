@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ChatProvider } from './contexts/ChatContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -20,6 +21,7 @@ import Map from './pages/Map';
 import Inventory from './pages/Inventory';
 import SpareParts from './pages/SpareParts';
 import WorkOrders from './pages/WorkOrders';
+import Chat from './pages/Chat';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -36,62 +38,65 @@ function AppRoutes() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+    <ChatProvider>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
 
-        {/* Admin & Manager Routes */}
-        <Route path="/users" element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <Users />
-          </ProtectedRoute>
-        } />
+          {/* Admin & Manager Routes */}
+          <Route path="/users" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <Users />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/vehicles" element={
-          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-            <Vehicles />
-          </ProtectedRoute>
-        } />
+          <Route path="/vehicles" element={
+            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+              <Vehicles />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/map" element={
-          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-            <Map />
-          </ProtectedRoute>
-        } />
+          <Route path="/map" element={
+            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+              <Map />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/maintenance" element={<Maintenance />} />
+          <Route path="/maintenance" element={<Maintenance />} />
 
-        <Route path="/work-orders" element={
-          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-            <WorkOrders />
-          </ProtectedRoute>
-        } />
+          <Route path="/work-orders" element={
+            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+              <WorkOrders />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/fuel" element={<Fuel />} />
-        <Route path="/perdiem" element={<PerDiem />} />
-        <Route path="/logs" element={<Logs />} />
+          <Route path="/fuel" element={<Fuel />} />
+          <Route path="/perdiem" element={<PerDiem />} />
+          <Route path="/logs" element={<Logs />} />
 
-        <Route path="/reports" element={
-          <ProtectedRoute allowedRoles={['admin', 'manager']}>
-            <Reports />
-          </ProtectedRoute>
-        } />
+          <Route path="/reports" element={
+            <ProtectedRoute allowedRoles={['admin', 'manager']}>
+              <Reports />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/inventory" element={
-          <ProtectedRoute allowedRoles={['admin', 'manager', 'user']}>
-            <Inventory />
-          </ProtectedRoute>
-        } />
+          <Route path="/inventory" element={
+            <ProtectedRoute allowedRoles={['admin', 'manager', 'user']}>
+              <Inventory />
+            </ProtectedRoute>
+          } />
 
-        <Route path="/spare-parts" element={<SpareParts />} />
+          <Route path="/spare-parts" element={<SpareParts />} />
 
-        <Route path="/news" element={<News />} />
-        <Route path="/settings" element={<Settings />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/news" element={<News />} />
+          <Route path="/settings" element={<Settings />} />
 
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </Layout>
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Layout>
+    </ChatProvider>
   );
 }
 

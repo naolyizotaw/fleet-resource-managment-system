@@ -29,7 +29,7 @@ const FOCUSED_ZOOM = 14;
  */
 const MapController = ({ selectedVehicle, onFlyComplete }) => {
   const map = useMap();
-  
+
   useEffect(() => {
     if (selectedVehicle && selectedVehicle.location?.lat && selectedVehicle.location?.lng) {
       map.flyTo(
@@ -37,16 +37,16 @@ const MapController = ({ selectedVehicle, onFlyComplete }) => {
         FOCUSED_ZOOM,
         { duration: 1.5 }
       );
-      
+
       // Notify when fly animation completes
       const timer = setTimeout(() => {
         if (onFlyComplete) onFlyComplete();
       }, 1500);
-      
+
       return () => clearTimeout(timer);
     }
   }, [selectedVehicle, map, onFlyComplete]);
-  
+
   return null;
 };
 
@@ -74,13 +74,18 @@ const Map = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data: vehicles, loading, error, refetch } = useFetchVehicleLocations();
-  
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [highlightedVehicleId, setHighlightedVehicleId] = useState(null);
   const searchRef = useRef(null);
+
+  // Auto-refresh state for real-time GPS tracking
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(15); // seconds
+  const autoRefreshRef = useRef(null);
 
   // Redirect drivers to dashboard
   useEffect(() => {
@@ -100,10 +105,30 @@ const Map = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Auto-refresh effect for real-time GPS tracking
+  useEffect(() => {
+    if (autoRefresh) {
+      autoRefreshRef.current = setInterval(() => {
+        refetch();
+      }, refreshInterval * 1000);
+    } else {
+      if (autoRefreshRef.current) {
+        clearInterval(autoRefreshRef.current);
+        autoRefreshRef.current = null;
+      }
+    }
+
+    return () => {
+      if (autoRefreshRef.current) {
+        clearInterval(autoRefreshRef.current);
+      }
+    };
+  }, [autoRefresh, refreshInterval, refetch]);
+
   // Filter vehicles based on search query
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    
+
     const query = searchQuery.toLowerCase();
     return vehicles.filter(v => {
       const plateMatch = v.plateNumber?.toLowerCase().includes(query);
@@ -144,7 +169,7 @@ const Map = () => {
     setTimeout(() => setSelectedVehicle(null), 100);
   };
 
-  // Compute vehicle statistics
+  // Compute vehicle statistics including online status
   const stats = useMemo(() => {
     const total = vehicles.length;
     const withLocation = vehicles.filter(v => v.location?.lat != null && v.location?.lng != null).length;
@@ -152,8 +177,15 @@ const Map = () => {
     const underMaintenance = vehicles.filter(v => v.status === 'under_maintenance').length;
     const inactive = vehicles.filter(v => v.status === 'inactive').length;
     const noLocation = total - withLocation;
-    
-    return { total, withLocation, active, underMaintenance, inactive, noLocation };
+
+    // Calculate online vehicles (location updated within last 5 minutes)
+    const online = vehicles.filter(v => {
+      if (!v.lastLocationUpdate) return false;
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      return new Date(v.lastLocationUpdate) > fiveMinutesAgo;
+    }).length;
+
+    return { total, withLocation, active, underMaintenance, inactive, noLocation, online };
   }, [vehicles]);
 
   // If user is driver, don't render (redirect handles navigation)
@@ -179,7 +211,7 @@ const Map = () => {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {/* Search Box */}
             <div className="relative" ref={searchRef}>
@@ -205,7 +237,7 @@ const Map = () => {
                   </button>
                 )}
               </div>
-              
+
               {/* Search Dropdown */}
               {isSearchOpen && (searchQuery.trim() || vehiclesWithLocation.length > 0) && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-100 rounded-xl shadow-2xl overflow-hidden z-[1001]">
@@ -230,9 +262,8 @@ const Map = () => {
                               key={vehicle._id}
                               onClick={() => handleSelectVehicle(vehicle)}
                               disabled={!vehicle.location?.lat}
-                              className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0 ${
-                                !vehicle.location?.lat ? 'opacity-50 cursor-not-allowed' : ''
-                              } ${highlightedVehicleId === vehicle._id ? 'bg-blue-50' : ''}`}
+                              className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0 ${!vehicle.location?.lat ? 'opacity-50 cursor-not-allowed' : ''
+                                } ${highlightedVehicleId === vehicle._id ? 'bg-blue-50' : ''}`}
                             >
                               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${getStatusColor(vehicle.status)}`}>
                                 <Truck className="h-4 w-4 text-white" />
@@ -268,9 +299,8 @@ const Map = () => {
                           <button
                             key={vehicle._id}
                             onClick={() => handleSelectVehicle(vehicle)}
-                            className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0 ${
-                              highlightedVehicleId === vehicle._id ? 'bg-blue-50' : ''
-                            }`}
+                            className={`w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0 ${highlightedVehicleId === vehicle._id ? 'bg-blue-50' : ''
+                              }`}
                           >
                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${getStatusColor(vehicle.status)}`}>
                               <Truck className="h-4 w-4 text-white" />
@@ -292,8 +322,20 @@ const Map = () => {
                 </div>
               )}
             </div>
-            
-            {/* Refresh Button */}
+
+            {/* Auto-Refresh Toggle */}
+            <button
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl shadow-lg hover:shadow-xl transition-all ${autoRefresh
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white'
+                  : 'bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200'
+                }`}
+            >
+              <RefreshCw className={`h-4 w-4 ${autoRefresh ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{autoRefresh ? 'Live Tracking' : 'Auto-Refresh Off'}</span>
+            </button>
+
+            {/* Manual Refresh Button */}
             <button
               onClick={refetch}
               disabled={loading}
@@ -318,7 +360,7 @@ const Map = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl p-3 shadow-md border-2 border-gray-100">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
@@ -330,7 +372,19 @@ const Map = () => {
               </div>
             </div>
           </div>
-          
+
+          <div className="bg-white rounded-xl p-3 shadow-md border-2 border-emerald-100">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Online Now</p>
+                <p className="text-lg font-black text-emerald-600">{stats.online}</p>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-xl p-3 shadow-md border-2 border-green-100">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
@@ -342,7 +396,7 @@ const Map = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl p-3 shadow-md border-2 border-orange-100">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -354,7 +408,7 @@ const Map = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl p-3 shadow-md border-2 border-red-100">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
@@ -366,7 +420,7 @@ const Map = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl p-3 shadow-md border-2 border-gray-200">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -392,7 +446,7 @@ const Map = () => {
             </div>
           </div>
         )}
-        
+
         {/* Error State */}
         {error && !loading && (
           <div className="absolute inset-0 bg-white z-[1000] flex items-center justify-center">
@@ -412,7 +466,7 @@ const Map = () => {
             </div>
           </div>
         )}
-        
+
         {/* No Vehicles State */}
         {!loading && !error && vehicles.length === 0 && (
           <div className="absolute inset-0 bg-white z-[1000] flex items-center justify-center">
@@ -434,7 +488,7 @@ const Map = () => {
             </div>
           </div>
         )}
-        
+
         {/* No Vehicles with Location State */}
         {!loading && !error && vehicles.length > 0 && stats.withLocation === 0 && (
           <div className="absolute inset-0 bg-white/95 z-[1000] flex items-center justify-center">
@@ -444,7 +498,7 @@ const Map = () => {
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">No Location Data</h3>
               <p className="text-sm text-gray-600 mb-4">
-                {vehicles.length} vehicle{vehicles.length !== 1 ? 's' : ''} found, but none have location data yet. 
+                {vehicles.length} vehicle{vehicles.length !== 1 ? 's' : ''} found, but none have location data yet.
                 Update vehicle locations to see them on the map.
               </p>
               <button
@@ -494,15 +548,15 @@ const Map = () => {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <ZoomControl position="topright" />
-          
+
           {/* Map Controller for programmatic movement */}
           <MapController selectedVehicle={selectedVehicle} />
-          
+
           {/* Render vehicle markers */}
           {vehicles.map((vehicle) => (
-            <VehicleMapMarker 
-              key={vehicle._id} 
-              vehicle={vehicle} 
+            <VehicleMapMarker
+              key={vehicle._id}
+              vehicle={vehicle}
               isHighlighted={highlightedVehicleId === vehicle._id}
             />
           ))}

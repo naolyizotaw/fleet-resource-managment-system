@@ -46,9 +46,9 @@ const maintenanceRequestSchema = new mongoose.Schema(
       default: "pending",
     },
     requestedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
     requestedDate: {
       type: Date,
@@ -71,6 +71,22 @@ const maintenanceRequestSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    images: [
+      {
+        filename: {
+          type: String,
+          required: true,
+        },
+        path: {
+          type: String,
+          required: true,
+        },
+        uploadedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     remarks: {
       type: String,
       trim: true,

@@ -3,6 +3,7 @@ const dotenv = require("dotenv").config();
 const dbConnect = require("./config/dbConnect");
 const authRoutes = require('./routes/authRoutes');
 const cors = require('cors');
+const path = require('path');
 
 const userRoutes = require('./routes/userRoutes');
 const vehicleRoutes = require('./routes/vehicleRoutes');
@@ -15,6 +16,7 @@ const newsRoutes = require('./routes/newsRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const sparePartRequestRoutes = require('./routes/sparePartRequestRoutes');
 const workOrderRoutes = require('./routes/workOrderRoutes');
+const gpsRoutes = require('./routes/gpsRoutes');
 
 
 const app = express();
@@ -23,6 +25,10 @@ dbConnect();
 
 //Middleware 
 app.use(express.json());
+// Serve static files from public directory (for mobile tracker)
+app.use(express.static(path.join(__dirname, '../public')));
+// Serve uploaded files (maintenance images, etc.)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 
 
@@ -39,6 +45,8 @@ app.use('/api/news', newsRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/spare-parts', sparePartRequestRoutes);
 app.use('/api/work-orders', workOrderRoutes);
+// Public GPS tracking routes (no authentication required)
+app.use('/api/gps', gpsRoutes);
 
 
 //start server 

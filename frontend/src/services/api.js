@@ -55,14 +55,20 @@ export const usersAPI = {
 // Vehicles API
 export const vehiclesAPI = {
   getAll: () => api.get('/api/vehicles'),
-  getMine: () => api.get('/api/vehicles/mine'),
   getById: (id) => api.get(`/api/vehicles/${id}`),
-  create: (vehicleData) => api.post('/api/vehicles', vehicleData),
-  update: (id, vehicleData) => api.put(`/api/vehicles/${id}`, vehicleData),
+  create: (data) => api.post('/api/vehicles', data),
+  update: (id, data) => api.put(`/api/vehicles/${id}`, data),
   delete: (id) => api.delete(`/api/vehicles/${id}`),
-  // Map feature endpoints (Phase 1)
+  // GPS Location endpoints
   getLocations: () => api.get('/api/vehicles/locations'),
-  updateLocation: (id, locationData) => api.put(`/api/vehicles/${id}/location`, locationData),
+  updateLocation: (id, location) => api.put(`/api/vehicles/${id}/location`, location),
+  generateTrackingToken: (id) => api.post(`/api/vehicles/${id}/tracking-token`),
+  // GPS Route History endpoints
+  getRoute: (id, params) => api.get(`/api/vehicles/${id}/route`, { params }), // params: { start, end, simplify }
+  getTrips: (id, params) => api.get(`/api/vehicles/${id}/trips`, { params }), // params: { stopThreshold }
+  clearLocationHistory: (id) => api.delete(`/api/vehicles/${id}/location-history`),
+  // Service marking
+  markService: (id, data) => api.post(`/api/vehicles/${id}/service`, data)
 };
 
 // Maintenance API
@@ -70,7 +76,9 @@ export const maintenanceAPI = {
   getAll: () => api.get('/api/maintenance'),
   getById: (id) => api.get(`/api/maintenance/${id}`),
   getMyRequests: () => api.get('/api/maintenance/my'),
-  create: (maintenanceData) => api.post('/api/maintenance', maintenanceData),
+  create: (maintenanceData) => api.post('/api/maintenance', maintenanceData,
+    (maintenanceData instanceof FormData) ? { headers: { 'Content-Type': undefined } } : {}
+  ),
   update: (id, maintenanceData) => api.patch(`/api/maintenance/${id}`, maintenanceData),
   delete: (id) => api.delete(`/api/maintenance/${id}`),
 };

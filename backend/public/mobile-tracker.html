@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fleet GPS Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            font-family: monospace;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status-card {
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .status-success {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-left: 4px solid #10b981;
+        }
+
+        .status-error {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-left: 4px solid #ef4444;
+        }
+
+        .status-warning {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            border-left: 4px solid #f59e0b;
+        }
+
+        .status-info {
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            border-left: 4px solid #3b82f6;
+        }
+
+        .status-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .status-text {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .info-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .info-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #666;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 20px;
+            font-weight: 800;
+            color: #667eea;
+        }
+
+        .pulse {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.3);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .battery-warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .battery-warning strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #856404;
+        }
+
+        .coordinates {
+            font-family: monospace;
+            font-size: 13px;
+            background: #f1f3f5;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+
+        .update-count {
+            text-align: center;
+            padding: 10px;
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            border-radius: 10px;
+            font-weight: 700;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="card">
+            <div class="header">
+                <h1>🚗 GPS Tracker</h1>
+                <p>Fleet Resource Management System</p>
+            </div>
+
+            <!-- Token Input (shown before tracking starts) -->
+            <div id="tokenInput">
+                <div class="input-group">
+                    <label for="trackingToken">Tracking Token</label>
+                    <input type="text" id="trackingToken" placeholder="Enter your tracking token" autocomplete="off">
+                </div>
+
+                <div class="battery-warning">
+                    <strong>⚡ Battery Notice</strong>
+                    GPS tracking will consume battery. For best results, keep your phone charging while tracking.
+                </div>
+
+                <button class="btn btn-primary" onclick="startTracking()">
+                    Start Tracking
+                </button>
+            </div>
+
+            <!-- Vehicle Info (shown after token validated) -->
+            <div id="vehicleInfo" class="hidden">
+                <div class="status-card status-info">
+                    <div class="status-title" id="vehicleName">Loading...</div>
+                    <div class="status-text" id="vehicleModel"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Card -->
+        <div id="statusSection" class="hidden">
+            <div class="card">
+                <div id="statusDisplay"></div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Updates Sent</div>
+                        <div class="info-value" id="updateCount">0</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Interval</div>
+                        <div class="info-value">30s</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Latitude</div>
+                        <div class="info-value" id="latDisplay">--</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Longitude</div>
+                        <div class="info-value" id="lngDisplay">--</div>
+                    </div>
+                </div>
+
+                <div id="lastUpdate" class="coordinates hidden"></div>
+
+                <button class="btn btn-danger" onclick="stopTracking()">
+                    Stop Tracking
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let trackingInterval = null;
+        let updateCount = 0;
+        let currentToken = '';
+
+        // Dynamic API Base - works on any port the page is loaded from
+        // If loaded via file://, it defaults to localhost:7001 (fallback)
+        const getApiBase = () => {
+            if (window.location.protocol === 'file:') {
+                return 'http://localhost:7001/api';
+            }
+            // Use current origin (protocol + hostname + port)
+            return window.location.origin + '/api';
+        };
+
+        const API_BASE = getApiBase();
+        console.log('API Endpoint:', API_BASE);
+
+        // Check for token in URL parameters or LocalStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tokenFromUrl = urlParams.get('token');
+            const savedToken = localStorage.getItem('trackingToken');
+
+            if (tokenFromUrl) {
+                document.getElementById('trackingToken').value = tokenFromUrl;
+            } else if (savedToken) {
+                document.getElementById('trackingToken').value = savedToken;
+                showStatus('info', 'Welcome Back', 'Loaded saved vehicle token');
+            }
+        });
+
+        async function startTracking() {
+            const tokenInput = document.getElementById('trackingToken');
+            const token = tokenInput.value.trim();
+
+            if (!token) {
+                showStatus('error', 'Error', 'Please enter a tracking token');
+                return;
+            }
+
+            currentToken = token;
+
+            // Validate token by fetching vehicle info
+            try {
+                const response = await fetch(`${API_BASE}/gps/status/${token}`);
+
+                if (!response.ok) {
+                    throw new Error('Invalid tracking token');
+                }
+
+                const vehicle = await response.json();
+
+                // Save valid token
+                localStorage.setItem('trackingToken', token);
+
+                // Show vehicle info
+                document.getElementById('vehicleName').textContent = vehicle.plateNumber || 'Unknown Vehicle';
+                document.getElementById('vehicleModel').textContent = vehicle.model || '';
+                document.getElementById('vehicleInfo').classList.remove('hidden');
+
+                // Hide token input, show tracking section
+                document.getElementById('tokenInput').classList.add('hidden');
+                document.getElementById('statusSection').classList.remove('hidden');
+
+                // Request GPS permission and start tracking
+                if ('geolocation' in navigator) {
+                    showStatus('info', 'Requesting Permission', 'Please allow GPS access...');
+
+                    // Try to get location
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            showStatus('success', 'Tracking Active', 'GPS location updates every 30 seconds');
+                            updateLocation(position);
+
+                            // Start periodic updates
+                            trackingInterval = setInterval(() => {
+                                navigator.geolocation.getCurrentPosition(
+                                    updateLocation,
+                                    handleLocationError
+                                );
+                            }, 30000); // 30 seconds
+                        },
+                        handleLocationError,
+                        {
+                            enableHighAccuracy: true,
+                            timeout: 10000,
+                            maximumAge: 0
+                        }
+                    );
+                } else {
+                    showStatus('error', 'GPS Not Supported', 'Your device does not support GPS tracking');
+                }
+            } catch (error) {
+                showStatus('error', 'Invalid Token', error.message);
+                // Only clear if it was a stored token that is now invalid to avoid loop
+                if (localStorage.getItem('trackingToken') === token) {
+                    localStorage.removeItem('trackingToken');
+                }
+            }
+        }
+
+        async function updateLocation(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+
+            try {
+                const response = await fetch(`${API_BASE}/gps/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        token: currentToken,
+                        lat: lat,
+                        lng: lng
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update location');
+                }
+
+                const result = await response.json();
+                updateCount++;
+
+                // Update UI
+                document.getElementById('updateCount').textContent = updateCount;
+                document.getElementById('latDisplay').textContent = lat.toFixed(6);
+                document.getElementById('lngDisplay').textContent = lng.toFixed(6);
+
+                const lastUpdateDiv = document.getElementById('lastUpdate');
+                lastUpdateDiv.classList.remove('hidden');
+                lastUpdateDiv.innerHTML = `
+                    <strong>Last Update:</strong> ${new Date().toLocaleTimeString()}<br>
+                    Accuracy: ±${Math.round(accuracy)}m
+                `;
+
+                showStatus('success', 'Location Updated', `Update #${updateCount} sent successfully`);
+            } catch (error) {
+                showStatus('error', 'Update Failed', error.message);
+            }
+        }
+
+        function handleLocationError(error) {
+            let message = 'Unknown error';
+
+            // Check for secure context
+            if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                message = 'Geolocation requires HTTPS. Currently on HTTP. Please use localhost or setup HTTPS.';
+                showStatus('error', 'Security Error', message);
+                return;
+            }
+
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    message = 'GPS permission denied. Please enable location access in your browser settings.';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    message = 'Location information unavailable. Check your GPS signal.';
+                    break;
+                case error.TIMEOUT:
+                    message = 'GPS request timed out. Please try again.';
+                    break;
+                default:
+                    message = `Error Code: ${error.code}. ${error.message}`;
+            }
+
+            showStatus('error', 'GPS Error', message);
+            console.error('Geolocation Error:', error);
+        }
+
+        function stopTracking() {
+            if (trackingInterval) {
+                clearInterval(trackingInterval);
+                trackingInterval = null;
+            }
+
+            // Show token input again
+            document.getElementById('tokenInput').classList.remove('hidden');
+            document.getElementById('vehicleInfo').classList.add('hidden');
+            document.getElementById('statusSection').classList.add('hidden');
+
+            // Add "Forget Vehicle" option logic
+            if (localStorage.getItem('trackingToken')) {
+                // We don't force clear, but we clear the inputs
+                // If they want to change vehicle, they can just type a new one over it
+                // Or we could add a specific "Forget" button. 
+                // For simple UX, let's just keep the value in the input but maybe select it?
+            }
+
+            // Reset UI state but keep text in input if saved
+            updateCount = 0;
+            currentToken = '';
+
+            const savedToken = localStorage.getItem('trackingToken');
+            if (savedToken) {
+                document.getElementById('trackingToken').value = savedToken;
+                // Add a small link to clear?
+                // For now, simple standard reset
+            } else {
+                document.getElementById('trackingToken').value = '';
+            }
+
+            showStatus('info', 'Tracking Stopped', 'You can start tracking again anytime');
+        }
+
+        // Add a "Forget Saved Vehicle" button dynamically if saved token exists
+        window.addEventListener('load', () => {
+            const tokenInputDiv = document.getElementById('tokenInput');
+            const forgetBtn = document.createElement('div');
+            forgetBtn.innerHTML = `<a href="#" onclick="localStorage.removeItem('trackingToken'); location.reload(); return false;" style="display:block; text-align:center; margin-top:15px; color:#666; font-size:12px; text-decoration:none;">Forget This Vehicle</a>`;
+            tokenInputDiv.appendChild(forgetBtn);
+        });
+
+        function showStatus(type, title, message) {
+            const statusDiv = document.getElementById('statusDisplay');
+            const statusClasses = {
+                'success': 'status-success',
+                'error': 'status-error',
+                'warning': 'status-warning',
+                'info': 'status-info'
+            };
+
+            const pulseHTML = type === 'success' ? '<span class="pulse"></span>' : '';
+
+            statusDiv.className = `status-card ${statusClasses[type] || 'status-info'}`;
+            statusDiv.innerHTML = `
+                <div class="status-title">${pulseHTML}${title}</div>
+                <div class="status-text">${message}</div>
+            `;
+        }
+    </script>
+</body>
+
+</html>
