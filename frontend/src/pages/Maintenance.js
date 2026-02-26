@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { maintenanceAPI, vehiclesAPI, usersAPI, workOrdersAPI } from '../services/api';
-import { Wrench, Plus, Search, Filter, Truck, Edit, Trash2, AlertCircle, CheckCircle, Clock, ClipboardList, ExternalLink } from 'lucide-react';
+import { Wrench, Plus, Search, Filter, Truck, Edit, Trash2, AlertCircle, CheckCircle, Clock, ClipboardList, ExternalLink, Upload, X, Image as ImageIcon, Paperclip } from 'lucide-react';
 
 const Maintenance = () => {
   const { user } = useAuth();
@@ -36,6 +36,8 @@ const Maintenance = () => {
     estimatedCost: '',
     notes: '',
   });
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [alert, setAlert] = useState({ type: '', message: '' });
 
   const fetchData = useCallback(async () => {
@@ -146,29 +148,65 @@ const Maintenance = () => {
     return vehicles.find(v => v._id === vField) || null;
   };
 
+  const handleImageSelect = (e) => {
+    const files = Array.from(e.target.files);
+    handleImageFiles(files);
+  };
+
+  const handleImageFiles = (files) => {
+    // Limit to 5 images total
+    const remainingSlots = 5 - selectedImages.length;
+    const filesToAdd = files.slice(0, remainingSlots);
+
+    if (files.length > remainingSlots) {
+      setAlert({ type: 'error', message: `Maximum 5 images allowed. Only ${remainingSlots} more can be added.` });
+      setTimeout(() => setAlert({ type: '', message: '' }), 3000);
+    }
+
+    // Validate file types and sizes
+    const validFiles = [];
+    for (const file of filesToAdd) {
+      if (!file.type.startsWith('image/')) {
+        setAlert({ type: 'error', message: `${file.name} is not an image file` });
+        setTimeout(() => setAlert({ type: '', message: '' }), 3000);
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setAlert({ type: 'error', message: `${file.name} exceeds 5MB limit` });
+        setTimeout(() => setAlert({ type: '', message: '' }), 3000);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (validFiles.length > 0) {
+      setSelectedImages(prev => [...prev, ...validFiles]);
+
+      // Create previews
+      validFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreviews(prev => [...prev, reader.result]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleRemoveImage = (index) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      // Build payload matching backend model
-      const payload = {
-        vehicleId: formData.vehicleId,
-        category: formData.category,
-        priority: formData.priority,
-        description: formData.description,
-      };
-      if (formData.category === 'Service' && formData.serviceKm !== undefined && formData.serviceKm !== '') {
-        payload.serviceKm = Number(formData.serviceKm);
-      }
-      if (formData.estimatedCost) payload.cost = Number(formData.estimatedCost);
-      if (formData.notes) payload.remarks = formData.notes;
-
       if (editingRequest) {
         // For updates the backend accepts status, remarks and cost; we'll send cost/remarks when present
         const updatePayload = {};
         if (formData.estimatedCost) updatePayload.cost = Number(formData.estimatedCost);
         if (formData.notes) updatePayload.remarks = formData.notes;
-        // keep original behavior for other fields
         console.log('Updating maintenance', editingRequest._id, updatePayload);
         const updateRes = await maintenanceAPI.update(editingRequest._id, updatePayload);
         console.log('Update response:', updateRes);
@@ -177,10 +215,27 @@ const Maintenance = () => {
         setAlert({ type: 'success', message: 'Maintenance request updated successfully' });
         setTimeout(() => setAlert({ type: '', message: '' }), 5000);
       } else {
-        console.log('Creating maintenance payload:', payload);
-        const response = await maintenanceAPI.create(payload);
+        // Create FormData for multipart upload
+        const formDataToSend = new FormData();
+        formDataToSend.append('vehicleId', formData.vehicleId);
+        formDataToSend.append('category', formData.category);
+        formDataToSend.append('priority', formData.priority);
+        formDataToSend.append('description', formData.description);
+
+        if (formData.category === 'Service' && formData.serviceKm !== undefined && formData.serviceKm !== '') {
+          formDataToSend.append('serviceKm', Number(formData.serviceKm));
+        }
+        if (formData.estimatedCost) formDataToSend.append('cost', Number(formData.estimatedCost));
+        if (formData.notes) formDataToSend.append('remarks', formData.notes);
+
+        // Append images
+        selectedImages.forEach((image) => {
+          formDataToSend.append('images', image);
+        });
+
+        console.log('Creating maintenance with images');
+        const response = await maintenanceAPI.create(formDataToSend);
         console.log('Create response:', response);
-        // backend returns { message, request }
         const created = response.data?.request || response.data;
         setRequests([...requests, created]);
         setConflictInfo(null);
@@ -332,11 +387,14 @@ const Maintenance = () => {
   const resetForm = () => {
     setFormData({
       vehicleId: '',
+      category: '',
       description: '',
       priority: 'medium',
       estimatedCost: '',
       notes: '',
     });
+    setSelectedImages([]);
+    setImagePreviews([]);
   };
 
   const viewExistingRequest = async (id) => {
@@ -540,6 +598,7 @@ const Maintenance = () => {
                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Priority</th>
                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Cost</th>
                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Status</th>
+                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Attachments</th>
                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Requested</th>
                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Approval</th>
                 <th className="px-6 py-4 text-left text-[10px] font-black text-gray-600 uppercase tracking-[0.1em] border-b-2 border-primary-200">Completed Date</th>
@@ -620,6 +679,16 @@ const Maintenance = () => {
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(request.status)}`}>
                       {request.status}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {request.images && request.images.length > 0 ? (
+                      <div className="flex items-center gap-1 text-gray-600" title={`${request.images.length} attachment(s)`}>
+                        <Paperclip size={14} className="text-primary-600" />
+                        <span className="text-xs font-bold text-primary-700">{request.images.length}</span>
+                      </div>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">Requested: {request.requestedDate ? new Date(request.requestedDate).toLocaleDateString() : (request.createdAt ? new Date(request.createdAt).toLocaleDateString() : '-')}</div>
@@ -897,6 +966,65 @@ const Maintenance = () => {
                   </div>
 
                   <div>
+                    <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">
+                      Upload Images (Optional)
+                    </label>
+                    <div className="space-y-3">
+                      {/* File input */}
+                      <div className="relative">
+                        <input
+                          type="file"
+                          id="image-upload"
+                          multiple
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                          className="hidden"
+                          disabled={selectedImages.length >= 5}
+                        />
+                        <label
+                          htmlFor="image-upload"
+                          className={`flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed rounded-xl transition-all cursor-pointer ${selectedImages.length >= 5
+                            ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                            : 'border-primary-300 bg-primary-50/50 hover:bg-primary-100 hover:border-primary-400'
+                            }`}
+                        >
+                          <Upload size={20} className={selectedImages.length >= 5 ? 'text-gray-400' : 'text-primary-600'} />
+                          <span className={`text-sm font-semibold ${selectedImages.length >= 5 ? 'text-gray-400' : 'text-primary-700'}`}>
+                            {selectedImages.length >= 5 ? 'Maximum 5 images' : 'Click to upload or drag and drop'}
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Image previews */}
+                      {imagePreviews.length > 0 && (
+                        <div className="grid grid-cols-5 gap-2">
+                          {imagePreviews.map((preview, index) => (
+                            <div key={index} className="relative group">
+                              <img
+                                src={preview}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-20 object-cover rounded-lg border-2 border-gray-200"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveImage(index)}
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+                                title="Remove image"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <p className="text-xs text-gray-500 font-medium">
+                        Maximum 5 images, 5MB each. Supported formats: JPEG, PNG, GIF, WebP
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
                     <label className="block text-xs font-black text-gray-600 uppercase tracking-wider mb-2">Additional Notes</label>
                     <textarea
                       value={formData.notes}
@@ -931,197 +1059,216 @@ const Maintenance = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div >
       )}
 
       {/* Delete confirmation modal (Fuel-style) */}
-      {showDeleteModal && requestToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
-            <div className="p-6 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mx-auto">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mt-4">Delete maintenance request</h3>
-              <p className="text-sm text-gray-500 mt-2">Are you sure you want to delete this maintenance request? This action cannot be undone.</p>
-              <div className="mt-6 flex justify-center gap-3">
-                <button
-                  onClick={() => { setShowDeleteModal(false); setRequestToDelete(null); }}
-                  className="px-4 py-2 rounded-md border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="px-4 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Complete request modal */}
-      {showCompleteModal && requestToComplete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
-            <div className="p-6">
-              <h3 className="text-lg font-medium text-gray-900">Mark as Completed</h3>
-              <p className="text-sm text-gray-600 mt-1">Enter the final maintenance cost and optional remarks.</p>
-              <div className="mt-4 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Cost</label>
-                  <input
-                    type="number"
-                    value={completeForm.cost}
-                    onChange={(e) => setCompleteForm({ ...completeForm, cost: e.target.value })}
-                    className="input-field mt-1"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                  />
+      {
+        showDeleteModal && requestToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
+              <div className="p-6 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mx-auto">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
+                  </svg>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Remarks</label>
-                  <textarea
-                    value={completeForm.remarks}
-                    onChange={(e) => setCompleteForm({ ...completeForm, remarks: e.target.value })}
-                    className="input-field mt-1"
-                    rows="3"
-                    placeholder="Notes about the maintenance completion..."
-                  />
-                </div>
-              </div>
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  onClick={() => { setShowCompleteModal(false); setRequestToComplete(null); setCompleteForm({ cost: '', remarks: '' }); }}
-                  className="px-4 py-2 rounded-md border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCompleteSubmit}
-                  className="px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
-                >
-                  Mark Completed
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Request Detail Modal */}
-      {showDetailModal && selectedRequest && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowDetailModal(false)} />
-
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
-                    Maintenance Request Details
-                  </h3>
+                <h3 className="text-lg font-medium text-gray-900 mt-4">Delete maintenance request</h3>
+                <p className="text-sm text-gray-500 mt-2">Are you sure you want to delete this maintenance request? This action cannot be undone.</p>
+                <div className="mt-6 flex justify-center gap-3">
                   <button
-                    onClick={() => setShowDetailModal(false)}
-                    className="text-gray-400 hover:text-gray-600"
+                    onClick={() => { setShowDeleteModal(false); setRequestToDelete(null); }}
+                    className="px-4 py-2 rounded-md border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
-                    <span className="sr-only">Close</span>
-                    ×
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="px-4 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700"
+                  >
+                    Delete
                   </button>
                 </div>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Request ID</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedRequest._id}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Status</label>
-                      <p className="mt-1 text-sm text-gray-900 capitalize">{selectedRequest.status}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Vehicle</label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {(() => {
-                        const vehicle = resolveVehicle(selectedRequest);
-                        return vehicle ? `${vehicle.plateNumber || 'No Plate'} - ${vehicle.model || 'Unknown Model'}` : 'Unknown Vehicle';
-                      })()}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Category</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedRequest.category}</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Description</label>
-                    <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{selectedRequest.description}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Priority</label>
-                      <p className="mt-1 text-sm text-gray-900 capitalize">{selectedRequest.priority}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Estimated Cost</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedRequest.estimatedCost ? `ETB ${formatNumber(selectedRequest.estimatedCost)}` : 'Not specified'}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Requested By</label>
-                    <p className="mt-1 text-sm text-gray-900">
-                      {getUserDisplay(selectedRequest.requestedBy)}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Notes</label>
-                    <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{selectedRequest.notes || 'No notes'}</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Requested Date</label>
-                      <p className="mt-1 text-sm text-gray-900">
-                        {selectedRequest.requestedDate ? new Date(selectedRequest.requestedDate).toLocaleDateString() : 'Not specified'}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Created At</label>
-                      <p className="mt-1 text-sm text-gray-900">
-                        {new Date(selectedRequest.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  onClick={() => setShowDetailModal(false)}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+
+      {/* Complete request modal */}
+      {
+        showCompleteModal && requestToComplete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
+              <div className="p-6">
+                <h3 className="text-lg font-medium text-gray-900">Mark as Completed</h3>
+                <p className="text-sm text-gray-600 mt-1">Enter the final maintenance cost and optional remarks.</p>
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Cost</label>
+                    <input
+                      type="number"
+                      value={completeForm.cost}
+                      onChange={(e) => setCompleteForm({ ...completeForm, cost: e.target.value })}
+                      className="input-field mt-1"
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Remarks</label>
+                    <textarea
+                      value={completeForm.remarks}
+                      onChange={(e) => setCompleteForm({ ...completeForm, remarks: e.target.value })}
+                      className="input-field mt-1"
+                      rows="3"
+                      placeholder="Notes about the maintenance completion..."
+                    />
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    onClick={() => { setShowCompleteModal(false); setRequestToComplete(null); setCompleteForm({ cost: '', remarks: '' }); }}
+                    className="px-4 py-2 rounded-md border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCompleteSubmit}
+                    className="px-4 py-2 rounded-md bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
+                  >
+                    Mark Completed
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Request Detail Modal */}
+      {
+        showDetailModal && selectedRequest && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowDetailModal(false)} />
+
+              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      Maintenance Request Details
+                    </h3>
+                    <button
+                      onClick={() => setShowDetailModal(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <span className="sr-only">Close</span>
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Request ID</label>
+                        <p className="mt-1 text-sm text-gray-900">{selectedRequest._id}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Status</label>
+                        <p className="mt-1 text-sm text-gray-900 capitalize">{selectedRequest.status}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Vehicle</label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {(() => {
+                          const vehicle = resolveVehicle(selectedRequest);
+                          return vehicle ? `${vehicle.plateNumber || 'No Plate'} - ${vehicle.model || 'Unknown Model'}` : 'Unknown Vehicle';
+                        })()}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Category</label>
+                      <p className="mt-1 text-sm text-gray-900">{selectedRequest.category}</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Description</label>
+                      <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{selectedRequest.description}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Priority</label>
+                        <p className="mt-1 text-sm text-gray-900 capitalize">{selectedRequest.priority}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Estimated Cost</label>
+                        <p className="mt-1 text-sm text-gray-900">{selectedRequest.estimatedCost ? `ETB ${formatNumber(selectedRequest.estimatedCost)}` : 'Not specified'}</p>
+                      </div>
+                    </div>
+
+                    {selectedRequest.images && selectedRequest.images.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Attached Images</label>
+                        <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {selectedRequest.images.map((img, idx) => (
+                            <a key={idx} href={`http://localhost:7001${img.path}`} target="_blank" rel="noopener noreferrer" className="block relative h-24 rounded-lg overflow-hidden border border-gray-200 hover:shadow-md transition-all">
+                              <img src={`http://localhost:7001${img.path}`} alt={`Attachment ${idx + 1}`} className="w-full h-full object-cover" />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Requested By</label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {getUserDisplay(selectedRequest.requestedBy)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Notes</label>
+                      <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{selectedRequest.notes || 'No notes'}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Requested Date</label>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {selectedRequest.requestedDate ? new Date(selectedRequest.requestedDate).toLocaleDateString() : 'Not specified'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Created At</label>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {new Date(selectedRequest.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                  <button
+                    type="button"
+                    onClick={() => setShowDetailModal(false)}
+                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 };
 

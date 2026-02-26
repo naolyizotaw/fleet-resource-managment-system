@@ -14,7 +14,7 @@ const createVehicle = async (req, res) => {
             if (exists) {
                 return res.status(409).json({ message: `Vehicle with plateNumber: ${data.plateNumber} already exists` });
             }
-        } 
+        }
         // Business rule: a driver can be assigned to only one vehicle
         if (data?.assignedDriver) {
             const taken = await Vehicle.findOne({ assignedDriver: data.assignedDriver });
@@ -26,14 +26,14 @@ const createVehicle = async (req, res) => {
                 return res.status(409).json({ message: `Driver is already assigned to vehicle with id: ${taken._id}` });
             }
         }
-    const vehicle = await Vehicle.create(data);
-    const populated = await vehicle.populate({ path: 'assignedDriver', select: 'fullName username role' });
+        const vehicle = await Vehicle.create(data);
+        const populated = await vehicle.populate({ path: 'assignedDriver', select: 'fullName username role' });
         // Ensure virtuals (serviceInfo) are included in the JSON response
         const out = populated && populated.toObject ? populated.toObject({ virtuals: true }) : populated;
         console.log(out);
         return res.status(201).json(out);
-         
-        
+
+
     } catch (err) {
         // Duplicate key from MongoDB unique index (fallback)
         if (err && err.code === 11000) {
@@ -53,7 +53,7 @@ const createVehicle = async (req, res) => {
 //@access admin/manager
 const getVehicles = async (req, res) => {
     try {
-    const vehicles = await Vehicle.find({}).populate({ path: 'assignedDriver', select: 'fullName username role' });
+        const vehicles = await Vehicle.find({}).populate({ path: 'assignedDriver', select: 'fullName username role' });
         // Include virtuals in each vehicle object
         const out = vehicles.map(v => v && v.toObject ? v.toObject({ virtuals: true }) : v);
         return res.status(200).json(out);
@@ -73,39 +73,39 @@ const getVehicleById = async (req, res) => {
         if (!mongoose.isValidObjectId(id)) {
             return res.status(400).json({ message: 'Invalid vehicle id' });
         }
-    const vehicle = await Vehicle.findById(id).populate({ path: 'assignedDriver', select: 'fullName username role' });
+        const vehicle = await Vehicle.findById(id).populate({ path: 'assignedDriver', select: 'fullName username role' });
         if (!vehicle) {
             return res.status(404).json({ message: 'Vehicle not found' });
         }
-                const out = vehicle && vehicle.toObject ? vehicle.toObject({ virtuals: true }) : vehicle;
+        const out = vehicle && vehicle.toObject ? vehicle.toObject({ virtuals: true }) : vehicle;
 
-                // Also include maintenance and fuel requests related to this vehicle to simplify client-side work
-                try {
-                    const MaintenanceRequest = require('../models/maintenanceRequest');
-                    const FuelRequest = require('../models/fuelRequest');
+        // Also include maintenance and fuel requests related to this vehicle to simplify client-side work
+        try {
+            const MaintenanceRequest = require('../models/maintenanceRequest');
+            const FuelRequest = require('../models/fuelRequest');
 
-                                // Only include completed maintenance requests and approved fuel requests for history
-                                const [maintRequests, fuelRequests] = await Promise.all([
-                                    MaintenanceRequest.find({ vehicleId: id, status: 'completed' })
-                                        .populate('requestedBy', 'fullName username')
-                                        .populate('approvedBy', 'fullName username')
-                                        .populate('driverId', 'fullName username'),
-                                    FuelRequest.find({ vehicleId: id, status: 'approved' })
-                                        .populate('requestedBy', 'fullName username')
-                                        .populate('approvedBy', 'fullName username')
-                                        .populate('driverId', 'fullName username')
-                                ]);
+            // Only include completed maintenance requests and approved fuel requests for history
+            const [maintRequests, fuelRequests] = await Promise.all([
+                MaintenanceRequest.find({ vehicleId: id, status: 'completed' })
+                    .populate('requestedBy', 'fullName username')
+                    .populate('approvedBy', 'fullName username')
+                    .populate('driverId', 'fullName username'),
+                FuelRequest.find({ vehicleId: id, status: 'approved' })
+                    .populate('requestedBy', 'fullName username')
+                    .populate('approvedBy', 'fullName username')
+                    .populate('driverId', 'fullName username')
+            ]);
 
-                    out.maintenance = maintRequests || [];
-                    out.fuel = fuelRequests || [];
-                } catch (e) {
-                    // If models can't be loaded for some reason, don't fail the whole request
-                    console.error('Error attaching maintenance/fuel to vehicle output:', e.message);
-                    out.maintenance = out.maintenance || [];
-                    out.fuel = out.fuel || [];
-                }
+            out.maintenance = maintRequests || [];
+            out.fuel = fuelRequests || [];
+        } catch (e) {
+            // If models can't be loaded for some reason, don't fail the whole request
+            console.error('Error attaching maintenance/fuel to vehicle output:', e.message);
+            out.maintenance = out.maintenance || [];
+            out.fuel = out.fuel || [];
+        }
 
-                return res.status(200).json(out);
+        return res.status(200).json(out);
     } catch (err) {
         return res.status(500).json({ message: err.message });
     }
@@ -209,7 +209,7 @@ const getVehicleLocations = async (req, res) => {
         const vehicles = await Vehicle.find({})
             .select('plateNumber model status currentKm location assignedDriver')
             .populate({ path: 'assignedDriver', select: 'fullName' });
-        
+
         const result = vehicles.map(v => ({
             _id: v._id,
             plateNumber: v.plateNumber,
@@ -222,7 +222,7 @@ const getVehicleLocations = async (req, res) => {
             } : null,
             location: v.location || { lat: null, lng: null, updatedAt: null }
         }));
-        
+
         return res.status(200).json(result);
     } catch (err) {
         return res.status(500).json({ message: err.message });
@@ -238,13 +238,13 @@ const updateVehicleLocation = async (req, res) => {
         if (!mongoose.isValidObjectId(id)) {
             return res.status(400).json({ message: 'Invalid vehicle id' });
         }
-        
+
         const { lat, lng } = req.body;
-        
+
         if (typeof lat !== 'number' || typeof lng !== 'number') {
             return res.status(400).json({ message: 'lat and lng must be valid numbers' });
         }
-        
+
         // Validate coordinate ranges
         if (lat < -90 || lat > 90) {
             return res.status(400).json({ message: 'lat must be between -90 and 90' });
@@ -252,7 +252,7 @@ const updateVehicleLocation = async (req, res) => {
         if (lng < -180 || lng > 180) {
             return res.status(400).json({ message: 'lng must be between -180 and 180' });
         }
-        
+
         const vehicle = await Vehicle.findByIdAndUpdate(
             id,
             {
@@ -264,16 +264,279 @@ const updateVehicleLocation = async (req, res) => {
             },
             { new: true, runValidators: true }
         ).populate({ path: 'assignedDriver', select: 'fullName username role' });
-        
+
         if (!vehicle) {
             return res.status(404).json({ message: 'Vehicle not found' });
         }
-        
+
         const out = vehicle.toObject ? vehicle.toObject({ virtuals: true }) : vehicle;
         return res.status(200).json(out);
     } catch (err) {
         const status = err.name === 'ValidationError' ? 400 : 500;
         return res.status(status).json({ message: err.message });
+    }
+};
+
+// @desc Generate or regenerate tracking token for a vehicle
+// @route POST /api/vehicles/:id/tracking-token
+// @access admin/manager
+const generateTrackingToken = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid vehicle id' });
+        }
+
+        // Generate a random UUID-like token
+        const crypto = require('crypto');
+        const trackingToken = crypto.randomBytes(16).toString('hex');
+
+        const vehicle = await Vehicle.findByIdAndUpdate(
+            id,
+            { trackingToken },
+            { new: true, runValidators: true }
+        ).populate({ path: 'assignedDriver', select: 'fullName username role' });
+
+        if (!vehicle) {
+            return res.status(404).json({ message: 'Vehicle not found' });
+        }
+
+        const out = vehicle.toObject ? vehicle.toObject({ virtuals: true }) : vehicle;
+        return res.status(200).json({
+            ...out,
+            trackerUrl: `${req.protocol}://${req.get('host')}/mobile-tracker.html?token=${trackingToken}`
+        });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+// @desc Update vehicle location via tracking token (PUBLIC - for mobile GPS tracking)
+// @route POST /api/gps/update
+// @access public (no auth required, uses tracking token)
+const updateLocationByToken = async (req, res) => {
+    try {
+        const { token, lat, lng, speed, accuracy } = req.body;
+
+        if (!token) {
+            return res.status(400).json({ message: 'Tracking token is required' });
+        }
+
+        if (typeof lat !== 'number' || typeof lng !== 'number') {
+            return res.status(400).json({ message: 'lat and lng must be valid numbers' });
+        }
+
+        // Validate coordinate ranges
+        if (lat < -90 || lat > 90) {
+            return res.status(400).json({ message: 'lat must be between -90 and 90' });
+        }
+        if (lng < -180 || lng > 180) {
+            return res.status(400).json({ message: 'lng must be between -180 and 180' });
+        }
+
+        const vehicle = await Vehicle.findOne({ trackingToken: token });
+
+        if (!vehicle) {
+            return res.status(404).json({ message: 'Invalid tracking token' });
+        }
+
+        const now = new Date();
+
+        // Update current location
+        vehicle.location = {
+            lat,
+            lng,
+            updatedAt: now
+        };
+        vehicle.lastLocationUpdate = now;
+        vehicle.isTracking = true;
+
+        // Add to location history
+        vehicle.locationHistory = vehicle.locationHistory || [];
+        vehicle.locationHistory.push({
+            lat,
+            lng,
+            timestamp: now,
+            speed: speed || null,
+            accuracy: accuracy || null,
+            source: 'gps'
+        });
+
+        // Keep only last 1000 points to prevent unlimited growth
+        if (vehicle.locationHistory.length > 1000) {
+            vehicle.locationHistory = vehicle.locationHistory.slice(-1000);
+        }
+
+        await vehicle.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Location updated successfully',
+            vehicleId: vehicle._id,
+            plateNumber: vehicle.plateNumber,
+            timestamp: vehicle.lastLocationUpdate,
+            historyCount: vehicle.locationHistory.length
+        });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+// @desc Get vehicle info by tracking token (PUBLIC - for mobile tracker display)
+// @route GET /api/gps/status/:token
+// @access public (no auth required)
+const getVehicleByToken = async (req, res) => {
+    try {
+        const { token } = req.params;
+
+        if (!token) {
+            return res.status(400).json({ message: 'Tracking token is required' });
+        }
+
+        const vehicle = await Vehicle.findOne({ trackingToken: token })
+            .select('plateNumber model status isTracking lastLocationUpdate location');
+
+        if (!vehicle) {
+            return res.status(404).json({ message: 'Invalid tracking token' });
+        }
+
+        const out = vehicle.toObject ? vehicle.toObject({ virtuals: true }) : vehicle;
+        return res.status(200).json(out);
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+// Import GPS utilities
+const { calculateRouteDistance, segmentTrips, simplifyRoute } = require('../utils/gpsUtils');
+
+// @desc Get vehicle route/path history with optional date filtering
+// @route GET /api/vehicles/:id/route?start=2024-01-01&end=2024-01-31&simplify=true
+// @access private
+const getVehicleRoute = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { start, end, simplify } = req.query;
+
+        const vehicle = await Vehicle.findById(id);
+        if (!vehicle) {
+            return res.status(404).json({ message: 'Vehicle not found' });
+        }
+
+        let locationHistory = vehicle.locationHistory || [];
+
+        // Filter by date range if provided
+        if (start || end) {
+            const startDate = start ? new Date(start) : new Date(0);
+            const endDate = end ? new Date(end) : new Date();
+
+            locationHistory = locationHistory.filter(point => {
+                const pointDate = new Date(point.timestamp);
+                return pointDate >= startDate && pointDate <= endDate;
+            });
+        }
+
+        // Simplify route if requested (reduces points while maintaining shape)
+        if (simplify === 'true' && locationHistory.length > 100) {
+            locationHistory = simplifyRoute(locationHistory);
+        }
+
+        // Calculate route statistics
+        const totalDistance = calculateRouteDistance(locationHistory);
+        const startTime = locationHistory.length > 0 ? locationHistory[0].timestamp : null;
+        const endTime = locationHistory.length > 0 ? locationHistory[locationHistory.length - 1].timestamp : null;
+        const duration = startTime && endTime ? (new Date(endTime) - new Date(startTime)) / 1000 / 60 : 0; // minutes
+
+        return res.status(200).json({
+            vehicleId: vehicle._id,
+            plateNumber: vehicle.plateNumber,
+            route: locationHistory,
+            statistics: {
+                totalPoints: locationHistory.length,
+                totalDistance: Math.round(totalDistance * 100) / 100, // km, rounded to 2 decimals
+                duration: Math.round(duration), // minutes
+                startTime,
+                endTime
+            }
+        });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+// @desc Get vehicle trips (segmented by stops)
+// @route GET /api/vehicles/:id/trips?stopThreshold=30
+// @access private
+const getVehicleTrips = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { stopThreshold } = req.query;
+
+        const vehicle = await Vehicle.findById(id);
+        if (!vehicle) {
+            return res.status(404).json({ message: 'Vehicle not found' });
+        }
+
+        const locationHistory = vehicle.locationHistory || [];
+        const threshold = parseInt(stopThreshold) || 30; // default 30 minutes
+
+        // Segment route into trips
+        const trips = segmentTrips(locationHistory, threshold);
+
+        // Format trips for response
+        const formattedTrips = trips.map((trip, index) => ({
+            tripNumber: index + 1,
+            startTime: trip.startTime,
+            endTime: trip.endTime,
+            duration: Math.round(trip.duration), // minutes
+            distance: Math.round(trip.distance * 100) / 100, // km
+            pointCount: trip.points.length,
+            startLocation: {
+                lat: trip.points[0].lat,
+                lng: trip.points[0].lng
+            },
+            endLocation: {
+                lat: trip.points[trip.points.length - 1].lat,
+                lng: trip.points[trip.points.length - 1].lng
+            }
+        }));
+
+        return res.status(200).json({
+            vehicleId: vehicle._id,
+            plateNumber: vehicle.plateNumber,
+            totalTrips: formattedTrips.length,
+            trips: formattedTrips
+        });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+// @desc Clear location history for a vehicle (admin only)
+// @route DELETE /api/vehicles/:id/location-history
+// @access private (admin)
+const clearLocationHistory = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const vehicle = await Vehicle.findById(id);
+        if (!vehicle) {
+            return res.status(404).json({ message: 'Vehicle not found' });
+        }
+
+        const previousCount = vehicle.locationHistory?.length || 0;
+        vehicle.locationHistory = [];
+        await vehicle.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Location history cleared successfully',
+            vehicleId: vehicle._id,
+            plateNumber: vehicle.plateNumber,
+            pointsCleared: previousCount
+        });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
     }
 };
 
@@ -285,5 +548,11 @@ module.exports = {
     deleteVehicle,
     markVehicleService,
     getVehicleLocations,
-    updateVehicleLocation
+    updateVehicleLocation,
+    generateTrackingToken,
+    updateLocationByToken,
+    getVehicleByToken,
+    getVehicleRoute,
+    getVehicleTrips,
+    clearLocationHistory
 };

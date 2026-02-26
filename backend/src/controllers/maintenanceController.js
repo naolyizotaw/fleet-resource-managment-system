@@ -11,11 +11,11 @@ const mongoose = require('mongoose');
 //@access driver, manager, admin
 const createMaintenance = async (req, res) => {
   try {
-  const { vehicleId, category, description, priority, serviceKm } = req.body;
+    const { vehicleId, category, description, priority, serviceKm } = req.body;
 
     if (!vehicleId || !category || !description) {
-      return res.status(400).json({ 
-        message: "vehicleId, category, and description are required" 
+      return res.status(400).json({
+        message: "vehicleId, category, and description are required"
       });
     }
 
@@ -26,7 +26,7 @@ const createMaintenance = async (req, res) => {
     }
 
     // existing check
-  
+
     const existing = await MaintenanceRequest.findOne({
       vehicleId,
       category,
@@ -50,11 +50,20 @@ const createMaintenance = async (req, res) => {
       serviceKm: (serviceKm !== undefined && serviceKm !== null && serviceKm !== '') ? Number(serviceKm) : null,
     });
 
-  await request.save();
+    // Handle uploaded images
+    if (req.files && req.files.length > 0) {
+      request.images = req.files.map(file => ({
+        filename: file.filename,
+        path: `/uploads/maintenance/${file.filename}`,
+        uploadedAt: new Date(),
+      }));
+    }
+
+    await request.save();
 
     // Resolve requester/driver names
     let requesterDoc = null;
-    try { requesterDoc = await User.findById(req.user.id).select('fullName username email'); } catch {}
+    try { requesterDoc = await User.findById(req.user.id).select('fullName username email'); } catch { }
     const requestedByName = requesterDoc?.fullName || requesterDoc?.username || requesterDoc?.email;
 
     // Notify requester
@@ -107,7 +116,7 @@ const createMaintenance = async (req, res) => {
     vehicle.status = "under_maintenance";
     await vehicle.save();
 
- 
+
     return res.status(201).json({
       message: "Maintenance request submitted successfully",
       request,
@@ -115,9 +124,9 @@ const createMaintenance = async (req, res) => {
 
   } catch (err) {
     console.error("Error creating maintenance request:", err);
-    res.status(500).json({ 
-      message: "Server error", 
-      error: err.message 
+    res.status(500).json({
+      message: "Server error",
+      error: err.message
     });
   }
 };
@@ -126,16 +135,16 @@ const createMaintenance = async (req, res) => {
 //@route GET /api/maintenance/
 //@access admin/manager
 const getMaintenances = async (req, res) => {
-    try {
+  try {
     const request = await MaintenanceRequest.find({})
       .populate('vehicleId', 'plateNumber model year manufacturer make')
       .populate('driverId', 'fullName username')
       .populate('requestedBy', 'fullName username')
       .populate('approvedBy', 'fullName username');
-        return res.status(200).json(request);
-    } catch (err) {
-        return res.status(500).json({ message: err.message });
-    }
+    return res.status(200).json(request);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
 };
 
 
@@ -144,7 +153,7 @@ const getMaintenances = async (req, res) => {
 //@access private (admin, manager)
 const getMaintenanceById = async (req, res) => {
   try {
-    const {id} = req.params;
+    const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid Request id' });
     }
@@ -187,7 +196,7 @@ const updateMaintenance = async (req, res) => {
       completed: [],
     };
 
-  if (status) {
+    if (status) {
       const allowed = allowedTransitions[currentStatus] || [];
       if (!allowed.includes(status)) {
         return res.status(400).json({
@@ -195,14 +204,14 @@ const updateMaintenance = async (req, res) => {
         });
       }
     }
-   
+
     if (remarks) {
       request.remarks = remarks;
     }
 
-    
+
     if (status) {
-     
+
       if (status === "approved" && !request.approvedBy) {
         request.approvedBy = req.user.id;
         request.approvedDate = new Date();
@@ -228,7 +237,7 @@ const updateMaintenance = async (req, res) => {
         } catch (e) { console.error('Notif create error:', e.message); }
       }
 
-      
+
       if (status === "completed") {
         request.completedDate = new Date();
         if (cost !== undefined) {
@@ -256,13 +265,13 @@ const updateMaintenance = async (req, res) => {
           });
         } catch (e) { console.error('Notif create error:', e.message); }
       }
-      
-      
+
+
       request.status = status;
     }
 
     // Allow updating cost without status change only if not already final (completed/rejected)
-  if (!status && cost !== undefined) {
+    if (!status && cost !== undefined) {
       if (currentStatus === 'completed' || currentStatus === 'rejected') {
         return res.status(400).json({ message: `Cannot update cost for a ${currentStatus} request.` });
       }
@@ -271,7 +280,7 @@ const updateMaintenance = async (req, res) => {
 
     await request.save();
 
-   
+
     if (status === "completed" || status === "rejected") {
       const vehicle = await Vehicle.findById(request.vehicleId);
       if (vehicle) {
@@ -363,10 +372,10 @@ const updateMaintenance = async (req, res) => {
     }
 
     return res.status(200).json({
-            message: status ? `Maintenance request has been ${status}.` : 'Maintenance request updated.',
-           request,
-           nextServiceInfo
-        });
+      message: status ? `Maintenance request has been ${status}.` : 'Maintenance request updated.',
+      request,
+      nextServiceInfo
+    });
   } catch (err) {
     console.error("Error updating maintenance request:", err);
     return res.status(500).json({ message: "Error updating maintenance request", error: err.message });
@@ -380,7 +389,7 @@ const updateMaintenance = async (req, res) => {
 //@access private (admin, manager)
 const deleteMaintenance = async (req, res) => {
   try {
-    const {id} = req.params;
+    const { id } = req.params;
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid Request id' });
     }
@@ -398,8 +407,8 @@ const deleteMaintenance = async (req, res) => {
 //@route GET /api/maintenance/my
 //@access private (driver)
 const getMyMaintenanceRequests = async (req, res) => {
-    try {
-        const userId = req.user.id;
+  try {
+    const userId = req.user.id;
 
     // Find vehicles assigned to this user (if any)
     const assignedVehicles = await Vehicle.find({ assignedDriver: userId }).select('_id');
@@ -423,18 +432,18 @@ const getMyMaintenanceRequests = async (req, res) => {
 
     // Return 200 with an array (empty if none) to simplify client handling
     return res.status(200).json(requests);
-    } catch (error) {
-        console.error("Error fetching user maintenance requests:", error);
-        res.status(500).json({ message: "Internal server error" });
-    }
+  } catch (error) {
+    console.error("Error fetching user maintenance requests:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };
 
 
 module.exports = {
   createMaintenance,
   getMaintenances,
-  getMaintenanceById, 
-  updateMaintenance,  
+  getMaintenanceById,
+  updateMaintenance,
   deleteMaintenance,
   getMyMaintenanceRequests
 };

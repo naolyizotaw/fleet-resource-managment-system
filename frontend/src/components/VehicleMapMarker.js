@@ -11,32 +11,32 @@ import { useNavigate } from 'react-router-dom';
 const getStatusColors = (status) => {
   switch (status) {
     case 'active':
-      return { 
-        primary: '#10B981', 
-        secondary: '#059669', 
+      return {
+        primary: '#10B981',
+        secondary: '#059669',
         glow: 'rgba(16, 185, 129, 0.4)',
-        pulse: true 
+        pulse: true
       };
     case 'under_maintenance':
-      return { 
-        primary: '#F59E0B', 
-        secondary: '#D97706', 
+      return {
+        primary: '#F59E0B',
+        secondary: '#D97706',
         glow: 'rgba(245, 158, 11, 0.4)',
-        pulse: false 
+        pulse: false
       };
     case 'inactive':
-      return { 
-        primary: '#EF4444', 
-        secondary: '#DC2626', 
+      return {
+        primary: '#EF4444',
+        secondary: '#DC2626',
         glow: 'rgba(239, 68, 68, 0.4)',
-        pulse: false 
+        pulse: false
       };
     default:
-      return { 
-        primary: '#6B7280', 
-        secondary: '#4B5563', 
+      return {
+        primary: '#6B7280',
+        secondary: '#4B5563',
         glow: 'rgba(107, 114, 128, 0.4)',
-        pulse: false 
+        pulse: false
       };
   }
 };
@@ -50,7 +50,7 @@ const getStatusColors = (status) => {
  */
 const createMarkerIcon = (status, hasLocation, isHighlighted = false) => {
   const colors = hasLocation ? getStatusColors(status) : getStatusColors('default');
-  
+
   // Highlight ring color (blue glow)
   const highlightRing = isHighlighted ? `
     <div style="
@@ -65,10 +65,10 @@ const createMarkerIcon = (status, hasLocation, isHighlighted = false) => {
       box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
     "></div>
   ` : '';
-  
+
   // Bounce animation for highlighted markers
   const bounceStyle = isHighlighted ? 'animation: bounce 0.6s ease-in-out 3;' : '';
-  
+
   // Modern truck icon marker with gradient background
   const svgIcon = `
     <div style="position: relative; width: 48px; height: 56px; ${bounceStyle}">
@@ -197,21 +197,21 @@ const getStatusBadge = (status) => {
  */
 const VehicleMapMarker = ({ vehicle, isHighlighted = false }) => {
   const navigate = useNavigate();
-  
+
   const hasLocation = vehicle.location?.lat != null && vehicle.location?.lng != null;
-  
+
   // If no location, don't render marker
   if (!hasLocation) {
     return null;
   }
-  
+
   const position = [vehicle.location.lat, vehicle.location.lng];
   const icon = createMarkerIcon(vehicle.status, hasLocation, isHighlighted);
-  
+
   const handleViewDetails = () => {
     navigate(`/vehicles?highlight=${vehicle._id}`);
   };
-  
+
   return (
     <Marker position={position} icon={icon}>
       <Popup className="vehicle-popup" maxWidth={320} minWidth={280}>
@@ -225,35 +225,66 @@ const VehicleMapMarker = ({ vehicle, isHighlighted = false }) => {
               {vehicle.status?.replace('_', ' ') || 'Unknown'}
             </span>
           </div>
-          
+
           {/* Details Grid */}
           <div className="space-y-2 mb-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Model</span>
               <span className="text-sm font-bold text-gray-800">{vehicle.model || 'N/A'}</span>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Driver</span>
               <span className="text-sm font-bold text-gray-800">
                 {vehicle.assignedDriver?.fullName || 'Unassigned'}
               </span>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Current KM</span>
               <span className="text-sm font-bold text-gray-800">
                 {vehicle.currentKm?.toLocaleString() || '0'} km
               </span>
             </div>
-            
+
+            {/* Online Status Indicator */}
+            <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">GPS Status</span>
+              <div className="flex items-center gap-2">
+                {(() => {
+                  if (!vehicle.lastLocationUpdate) {
+                    return (
+                      <>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                        <span className="text-xs font-bold text-gray-600">No Data</span>
+                      </>
+                    );
+                  }
+                  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+                  const isOnline = new Date(vehicle.lastLocationUpdate) > fiveMinutesAgo;
+
+                  return isOnline ? (
+                    <>
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs font-bold text-emerald-600">Online</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                      <span className="text-xs font-bold text-gray-600">Offline</span>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Last Updated</span>
               <span className="text-sm font-medium text-gray-600">
-                {formatDate(vehicle.location?.updatedAt)}
+                {formatDate(vehicle.lastLocationUpdate || vehicle.location?.updatedAt)}
               </span>
             </div>
-            
+
             {/* Coordinates */}
             <div className="pt-2 border-t border-gray-100">
               <div className="flex items-center justify-between">
@@ -264,7 +295,7 @@ const VehicleMapMarker = ({ vehicle, isHighlighted = false }) => {
               </div>
             </div>
           </div>
-          
+
           {/* Action Button */}
           <button
             onClick={handleViewDetails}

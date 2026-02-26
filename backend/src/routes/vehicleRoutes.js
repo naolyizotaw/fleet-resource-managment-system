@@ -7,7 +7,11 @@ const {
     deleteVehicle,
     markVehicleService,
     getVehicleLocations,
-    updateVehicleLocation
+    updateVehicleLocation,
+    generateTrackingToken,
+    getVehicleRoute,
+    getVehicleTrips,
+    clearLocationHistory
 } = require("../controllers/vehicleController");
 
 const { verifyToken } = require("../middlewares/authMiddleware");
@@ -37,9 +41,16 @@ router.get("/:id", verifyToken, authorizeRoles("admin", "manager"), getVehicleBy
 router.put("/:id", verifyToken, authorizeRoles("admin", "manager"), updateVehicle);
 // Update vehicle location manually (for map feature)
 router.put("/:id/location", verifyToken, authorizeRoles("admin", "manager"), updateVehicleLocation);
+// Generate or regenerate tracking token for GPS tracking
+router.post("/:id/tracking-token", verifyToken, authorizeRoles("admin", "manager"), generateTrackingToken);
 router.delete("/:id", verifyToken, authorizeRoles("admin", "manager"), deleteVehicle);
 // record a service event
 router.post('/:id/service', verifyToken, authorizeRoles('admin', 'manager'), markVehicleService);
+
+// GPS Route History endpoints
+router.get('/:id/route', verifyToken, authorizeRoles('admin', 'manager'), getVehicleRoute);
+router.get('/:id/trips', verifyToken, authorizeRoles('admin', 'manager'), getVehicleTrips);
+router.delete('/:id/location-history', verifyToken, authorizeRoles('admin'), clearLocationHistory);
 
 
 

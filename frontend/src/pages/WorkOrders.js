@@ -6,7 +6,7 @@ import { ClipboardList, Plus, Search, Filter, Wrench, User, Package, DollarSign,
 import WorkOrderPrintTemplate from '../components/WorkOrderPrintTemplate';
 
 const WorkOrders = () => {
-    const { user } = useAuth();
+    const { hasRole } = useAuth();
     const [workOrders, setWorkOrders] = useState([]);
     const [maintenanceRequests, setMaintenanceRequests] = useState([]);
     const [users, setUsers] = useState([]);
@@ -915,8 +915,8 @@ const WorkOrders = () => {
                                                         <td className="px-4 py-3">{part.itemName}</td>
                                                         <td className="px-4 py-3 text-center">
                                                             <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full ${part.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                                    part.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                                                        'bg-yellow-100 text-yellow-800'
+                                                                part.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                                                    'bg-yellow-100 text-yellow-800'
                                                                 }`}>
                                                                 {part.status || 'pending'}
                                                             </span>
